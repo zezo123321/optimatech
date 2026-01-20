@@ -1,0 +1,49 @@
+Act as a Senior Software Architect and Lead Flutter Developer.
+I am building an MVP for a SaaS Training Management Platform (LMS) called "TadreebLink".
+The target audience is: NGOs, Training Centers, and Freelance Trainers.
+The goal is to launch a functional MVP in 10 days using **Flutter (Web & Mobile)** and **Firebase**.
+
+### 1. Project Context & Requirements:
+* **Business Model:** Multi-tenant SaaS (Each Organization/Trainer has their own isolated data/students).
+* **User Roles:**
+    1.  **Super Admin:** (Me, managing the platform).
+    2.  **Org Admin:** (The client - NGO Manager/Training Center Owner). Creates courses, adds students, views analytics.
+    3.  **Instructor:** (Freelancer or Employee). Grades assignments, manages course content.
+    4.  **Student:** (The trainee). Views courses, watches videos, submits assignments.
+
+### 2. Tech Stack:
+* **Frontend:** Flutter (Targeting Web for MVP primarily).
+* **Backend:** Firebase (Firestore NoSQL Database, Firebase Auth, Firebase Storage).
+* **State Management:** Riverpod (or Provider).
+* **Routing:** GoRouter.
+
+### 3. Core MVP Features (Scope):
+1.  **Multi-role Authentication:** Users sign in and are routed to their specific dashboard based on role (Admin Dashboard vs. Student View).
+2.  **Course Management:** Create/Edit Courses -> Modules -> Lessons (Video URL, PDF).
+3.  **Student Management:** Enroll students in courses manually or via link.
+4.  **Assignments:** Text-based or file upload assignments + Grading system.
+5.  **Analytics (Crucial):** Dashboard showing: Attendance rate, Assignment completion rate, Average scores.
+
+### 4. YOUR TASK:
+Please provide a complete technical roadmap and code foundation for this MVP. Specifically, generate the following:
+
+**Step 1: The Database Schema (Firestore)**
+* Design a scalable NoSQL schema.
+* Define Collections: `organizations`, `users`, `courses`, `enrollments`, `assignments`, `submissions`.
+* Show the JSON structure for each document, ensuring we handle "Multi-tenancy" (e.g., every document must have `orgId`).
+
+**Step 2: Project Structure & Dependencies**
+* Propose a "Clean Architecture" folder structure for Flutter (`lib/core`, `lib/features`, `lib/models`, etc.).
+* List the essential `pubspec.yaml` packages needed for this specific stack.
+
+**Step 3: Core Data Models (Dart Code)**
+* Write the Dart classes (using `freezed` or standard) for: `AppUser`, `Course`, `Lesson`, `Assignment`.
+* Include `toMap()` and `fromMap()` methods for Firestore integration.
+
+**Step 4: The "Role-Based Redirect" Logic**
+* Write the logic for a `AuthWrapper` widget that checks the user's role from Firestore after login and redirects them to the correct screen (AdminHome vs. StudentHome).
+
+**Step 5: The "Analytics" Service Logic**
+* Write a pseudo-code or service function to calculate "Course Completion Rate" for a specific Organization.
+
+Please be precise, use best practices for scalability, and ensure the code is ready to copy-paste.
