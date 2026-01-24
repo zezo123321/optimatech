@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input";
 
 export default function Login() {
   const { user, isLoading, loginMutation } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -45,7 +47,15 @@ export default function Login() {
   });
 
   const onSubmit = (data: any) => {
-    loginMutation.mutate(data);
+    loginMutation.mutate(data, {
+      onError: (error) => {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: error.message,
+        });
+      },
+    });
   };
 
   if (isLoading) {
