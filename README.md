@@ -2,7 +2,7 @@
 
 ## 📋 الملفات الموجودة
 ```
-/media/techno/New Volume3/optimatech/
+optimatech/
 ├── index.html              # الصفحة الرئيسية
 └── functions/
     └── api/
@@ -81,7 +81,7 @@ git push -u origin main
 ### محليًا (اختياري):
 ```bash
 npm install -g wrangler
-cd "/media/techno/New Volume3/optimatech"
+cd "optimatech"
 
 # ضيف الـ secrets
 echo "RESEND_API_KEY=re_your_key" >> .dev.vars

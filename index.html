@@ -1000,32 +1000,7 @@
             lastScroll = currentScroll;
         });
 
-        // Form submission handler - now using native form submission to Pages Function
-        // Remove preventDefault to allow actual POST to /api/contact
-        /*
-        document.getElementById('contactForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const name = formData.get('name');
-            const email = formData.get('email');
-            const phone = formData.get('phone');
-            
-            // Create success message with animation
-            const button = this.querySelector('.form-submit');
-            const originalText = button.textContent;
-            button.textContent = '✓ تم الإرسال بنجاح!';
-            button.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.style.background = '';
-                this.reset();
-            }, 3000);
-            
-            console.log('Form Data:', { name, email, phone });
-        });
-        */
+        // Form submission now uses native form submission to Pages Function at /api/contact
 
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
