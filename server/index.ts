@@ -2,9 +2,14 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { join } from "path";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Serve uploaded files statically - GLOBAL MIDDLEWARE
+console.log("Initializing static file serving...");
+app.use("/uploads", express.static(join(process.cwd(), "uploads")));
 
 declare module "http" {
   interface IncomingMessage {
@@ -55,6 +60,9 @@ app.use((req, res, next) => {
       log(logLine);
     }
   });
+
+  // Serve uploaded files statically
+  // Removed from here to avoid recreation on every request. Moved to top level.
 
   next();
 });

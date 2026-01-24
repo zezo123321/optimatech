@@ -51,12 +51,14 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
+  const fullName = [claims["first_name"], claims["last_name"]].filter(Boolean).join(" ");
   await authStorage.upsertUser({
-    id: claims["sub"],
+    replitId: claims["sub"],
     email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
+    name: fullName || claims["name"],
+    username: claims["preferred_username"] || `user_${claims["sub"].substring(0, 8)}`,
+    password: "REPLIT_AUTH_USER", // Placeholder for OAuth
+    role: "student",
   });
 }
 

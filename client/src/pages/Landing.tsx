@@ -15,12 +15,12 @@ export default function Landing() {
             <span className="font-display font-bold text-xl">TadreebLink</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/api/login">
+            <Link href="/auth/login">
               <button className="px-5 py-2 rounded-full font-medium text-sm border border-border hover:bg-muted transition-colors">
                 Sign In
               </button>
             </Link>
-            <Link href="/api/login">
+            <Link href="/auth/login">
               <button className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
                 Get Started
               </button>
@@ -30,39 +30,64 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 overflow-hidden">
+      <section className="relative pt-32 pb-40 overflow-hidden bg-gradient-to-b from-primary/5 to-background">
         <div className="absolute inset-0 bg-grid-slate-900/[0.04] bg-[bottom_1px_center] [mask-image:linear-gradient(to_bottom,transparent,black)] pointer-events-none" />
+
+        {/* Animated Blob/Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
+
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-5xl mx-auto text-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             >
-              <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-6 border border-primary/20">
-                The Future of Corporate Training
-              </span>
-              <h1 className="text-5xl md:text-7xl font-display font-extrabold tracking-tight text-foreground mb-6 leading-tight">
-                Empower your team with <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600">
-                  World-Class Learning
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-border shadow-sm mb-8">
+                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  New: AI-Powered Learning Paths
+                </span>
+              </div>
+
+              <h1 className="text-6xl md:text-8xl font-display font-black tracking-tighter text-foreground mb-8 leading-tight">
+                Unlock Your Team's <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-600 to-indigo-600 animate-gradient-x">
+                  Full Potential
                 </span>
               </h1>
-              <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                A unified platform for creating, managing, and tracking educational experiences. 
-                Built for modern organizations that value growth.
+
+              <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed font-light">
+                The enterprise LMS that combines powerful course management with a delightful learner experience.
               </p>
+
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/api/login">
-                  <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-2">
-                    Start Learning Now <ArrowRight size={20} />
+                <Link href="/auth/login">
+                  <button className="w-full sm:w-auto px-10 py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-all shadow-xl hover:shadow-primary/25 hover:-translate-y-1 flex items-center justify-center gap-2 group">
+                    Start Free Trial
+                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Link>
-                <Link href="/api/login">
-                  <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-white border border-border text-foreground font-semibold text-lg hover:bg-muted transition-all flex items-center justify-center">
-                    Request Demo
+                <Link href="/auth/login">
+                  <button className="w-full sm:w-auto px-10 py-5 rounded-full bg-white border border-border text-foreground font-semibold text-lg hover:bg-gray-50 transition-all flex items-center justify-center">
+                    View Demo
                   </button>
                 </Link>
+              </div>
+
+              {/* Stats / Social Proof */}
+              <div className="mt-20 pt-10 border-t border-border/40 grid grid-cols-2 md:grid-cols-4 gap-8">
+                {[
+                  { label: "Active Learners", value: "50k+" },
+                  { label: "Courses Created", value: "1200+" },
+                  { label: "Completion Rate", value: "94%" },
+                  { label: "Enterprise Customers", value: "200+" }
+                ].map((stat, i) => (
+                  <div key={i} className="flex flex-col items-center">
+                    <span className="text-3xl font-bold text-foreground font-display">{stat.value}</span>
+                    <span className="text-sm text-muted-foreground">{stat.label}</span>
+                  </div>
+                ))}
               </div>
             </motion.div>
           </div>

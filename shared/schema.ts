@@ -4,7 +4,7 @@ import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // === ENUMS ===
-export const userRoleEnum = pgEnum("user_role", ["super_admin", "org_admin", "instructor", "student"]);
+export const userRoleEnum = pgEnum("user_role", ["super_admin", "org_admin", "instructor", "ta", "student"]);
 export const lessonTypeEnum = pgEnum("lesson_type", ["video", "pdf", "text"]);
 
 // === USERS & ORGS ===
@@ -12,17 +12,24 @@ export const organizations = pgTable("organizations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  accessCode: text("access_code"), // e.g. "TADREEB2026"
   logoUrl: text("logo_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  replitId: text("replit_id").unique(), // For Replit Auth
-  email: text("email").notNull().unique(),
+  replitId: text("replit_id").unique(), // Optional now
+  userCode: text("user_code").unique(),
+  email: text("email").unique(),
+  username: text("username").unique().notNull(),
+  password: text("password").notNull(),
   name: text("name"),
+  headline: text("headline"),
+  bio: text("bio"),
   role: userRoleEnum("role").default("student").notNull(),
   organizationId: integer("organization_id").references(() => organizations.id),
+  xp: integer("xp").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -35,6 +42,17 @@ export const courses = pgTable("courses", {
   description: text("description"),
   thumbnailUrl: text("thumbnail_url"),
   published: boolean("published").default(false),
+  isPublic: boolean("is_public").default(false), // Logic: Visible to B2C users across tenants
+  price: integer("price").default(0),
+  currency: text("currency").default("EGP"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const courseStaff = pgTable("course_staff", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  role: text("role").notNull(), // 'co-instructor', 'ta'
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -53,6 +71,15 @@ export const lessons = pgTable("lessons", {
   contentUrl: text("content_url"), // For video/PDF
   textContent: text("text_content"), // For text lessons
   order: integer("order").notNull(),
+});
+
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  content: text("content").notNull(),
+  parentId: integer("parent_id"), // Self-reference manually handled in logic/queries or add .references(() => comments.id)
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // === LEARNING ===
@@ -114,6 +141,18 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   modules: many(modules),
   assignments: many(assignments),
   enrollments: many(enrollments),
+  staff: many(courseStaff),
+}));
+
+export const courseStaffRelations = relations(courseStaff, ({ one }) => ({
+  course: one(courses, {
+    fields: [courseStaff.courseId],
+    references: [courses.id],
+  }),
+  user: one(users, {
+    fields: [courseStaff.userId],
+    references: [users.id],
+  }),
 }));
 
 export const modulesRelations = relations(modules, ({ one, many }) => ({
@@ -161,16 +200,61 @@ export const submissionsRelations = relations(submissions, ({ one }) => ({
   }),
 }));
 
+export const lessonCompletions = pgTable("lesson_completions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+export const lessonCompletionsRelations = relations(lessonCompletions, ({ one }) => ({
+  user: one(users, {
+    fields: [lessonCompletions.userId],
+    references: [users.id],
+  }),
+  lesson: one(lessons, {
+    fields: [lessonCompletions.lessonId],
+    references: [lessons.id],
+  }),
+  course: one(courses, {
+    fields: [lessonCompletions.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const commentsRelations = relations(comments, ({ one, many }) => ({
+  user: one(users, {
+    fields: [comments.userId],
+    references: [users.id],
+  }),
+  lesson: one(lessons, {
+    fields: [comments.lessonId],
+    references: [lessons.id],
+  }),
+  parent: one(comments, {
+    fields: [comments.parentId],
+    references: [comments.id],
+    relationName: "replies",
+  }),
+  replies: many(comments, {
+    relationName: "replies",
+  }),
+}));
+
 // === INSERTS ===
 export const insertOrganizationSchema = createInsertSchema(organizations);
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
-export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true });
+export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true }).extend({
+  isPublic: z.boolean().optional()
+});
 export const insertModuleSchema = createInsertSchema(modules).omit({ id: true });
 export const insertLessonSchema = createInsertSchema(lessons).omit({ id: true });
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true, enrolledAt: true, completedAt: true, progress: true });
 export const insertAssignmentSchema = createInsertSchema(assignments).omit({ id: true });
 export const insertSubmissionSchema = createInsertSchema(submissions).omit({ id: true, submittedAt: true, grade: true, feedback: true });
 export const gradeSubmissionSchema = createInsertSchema(submissions).pick({ grade: true, feedback: true });
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 
 // === TYPES ===
 export type User = typeof users.$inferSelect;
@@ -181,6 +265,7 @@ export type Lesson = typeof lessons.$inferSelect;
 export type Enrollment = typeof enrollments.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
+export type Comment = typeof comments.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
@@ -190,6 +275,11 @@ export type InsertLesson = z.infer<typeof insertLessonSchema>;
 export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
 export type GradeSubmission = z.infer<typeof gradeSubmissionSchema>;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+
+export const insertCourseStaffSchema = createInsertSchema(courseStaff).omit({ id: true, createdAt: true });
+export type InsertCourseStaff = z.infer<typeof insertCourseStaffSchema>;
+export type CourseStaff = typeof courseStaff.$inferSelect;
 
 // === API DTOs ===
 export type AnalyticsResponse = {

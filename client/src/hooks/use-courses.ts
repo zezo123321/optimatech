@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import { type InsertCourse } from "@shared/schema";
+import { type InsertCourse, type InsertModule, type InsertLesson } from "@shared/schema";
 
 export function useCourses(organizationId?: number) {
   return useQuery({
@@ -19,8 +19,17 @@ export function useCourse(id: number) {
     queryKey: [api.courses.get.path, id],
     queryFn: async () => {
       const url = buildUrl(api.courses.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch course");
+      console.log(`[useCourse] Fetching ${url}`);
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
+      console.log(`[useCourse] Response status: ${res.status}`);
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`[useCourse] Failed: ${res.status} ${text}`);
+        throw new Error(`Failed to fetch course: ${res.status} ${text}`);
+      }
       return api.courses.get.responses[200].parse(await res.json());
     },
     enabled: !!id,
@@ -63,6 +72,67 @@ export function useUpdateCourse() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.courses.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.courses.get.path, variables.id] });
+    },
+  });
+}
+
+export function useCreateModule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ courseId, ...data }: { courseId: number } & Omit<InsertModule, "courseId">) => {
+      const url = buildUrl(api.modules.create.path, { courseId });
+      const res = await fetch(url, {
+        method: api.modules.create.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to create module");
+      return api.modules.create.responses[201].parse(await res.json());
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [api.courses.get.path, variables.courseId] });
+    },
+  });
+}
+
+export function useCreateLesson() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ moduleId, courseId, ...data }: { moduleId: number; courseId: number } & Omit<InsertLesson, "moduleId">) => {
+      const url = buildUrl(api.lessons.create.path, { moduleId });
+      const res = await fetch(url, {
+        method: api.lessons.create.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to create lesson");
+      return api.lessons.create.responses[201].parse(await res.json());
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [api.courses.get.path, variables.courseId] });
+    },
+  });
+}
+
+export function useToggleLessonCompletion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ courseId, lessonId, completed }: { courseId: number; lessonId: number; completed: boolean }) => {
+      const url = buildUrl(api.lessonCompletions.update.path, { courseId, lessonId });
+      const res = await fetch(url, {
+        method: api.lessonCompletions.update.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update lesson completion");
+      return api.lessonCompletions.update.responses[200].parse(await res.json());
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [api.courses.get.path, variables.courseId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
   });
 }

@@ -2,9 +2,22 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 export default function Login() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, loginMutation } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -20,6 +33,21 @@ export default function Login() {
     }
   }, [user, isLoading, setLocation]);
 
+  const form = useForm({
+    resolver: zodResolver(z.object({
+      username: z.string().min(1, "Code is required"), // "Code" per user request
+      password: z.string().min(1, "Password is required")
+    })),
+    defaultValues: {
+      username: "",
+      password: ""
+    }
+  });
+
+  const onSubmit = (data: any) => {
+    loginMutation.mutate(data);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -30,16 +58,16 @@ export default function Login() {
 
   // If we are here, user is not logged in.
   // We can just redirect to the API login endpoint or show a custom button.
-  // Since Replit Auth handles the UI, we just link to it.
-  
   // However, let's create a nice interstitial page.
+  /* Login Form State */
+
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left Side - Brand */}
       <div className="hidden lg:flex flex-col justify-between p-12 bg-primary text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1600&auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
         {/* <!-- office meeting workspace --> */}
-        
+
         <div className="relative z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center font-bold text-xl">TL</div>
@@ -61,22 +89,54 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Side - Login CTA */}
+      {/* Right Side - Login Form */}
       <div className="flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md space-y-8 text-center">
-          <div className="space-y-2">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center space-y-2">
             <h1 className="text-3xl font-display font-bold text-foreground">Welcome Back</h1>
-            <p className="text-muted-foreground">Sign in to your account to continue</p>
+            <p className="text-muted-foreground">Sign in with your Code and Password</p>
           </div>
 
-          <a 
-            href="/api/login"
-            className="w-full block py-4 px-6 rounded-xl bg-primary text-primary-foreground font-semibold text-lg shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
-          >
-            Sign In with Replit Auth
-          </a>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your code" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter your password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div className="pt-8 border-t border-border">
+              <Button type="submit" className="w-full py-6 text-lg font-semibold" disabled={loginMutation.isPending}>
+                {loginMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Sign In
+              </Button>
+            </form>
+          </Form>
+
+          <div className="pt-8 border-t border-border text-center space-y-4">
+            <p className="text-sm">
+              Don't have an account? <a href="/auth/register" className="text-primary hover:underline font-semibold">Sign up</a>
+            </p>
             <p className="text-xs text-muted-foreground">
               By signing in, you agree to our Terms of Service and Privacy Policy.
             </p>

@@ -1,14 +1,15 @@
 import { z } from 'zod';
-import { 
-  insertUserSchema, 
-  insertOrganizationSchema, 
-  insertCourseSchema, 
+import {
+  insertUserSchema,
+  insertOrganizationSchema,
+  insertCourseSchema,
   insertModuleSchema,
   insertLessonSchema,
   insertAssignmentSchema,
   insertSubmissionSchema,
   gradeSubmissionSchema,
-  users, organizations, courses, modules, lessons, enrollments, assignments, submissions
+  insertCommentSchema,
+  users, organizations, courses, modules, lessons, enrollments, assignments, submissions, comments
 } from './schema';
 
 export const errorSchemas = {
@@ -91,9 +92,10 @@ export const api = {
       method: 'GET' as const,
       path: '/api/courses/:id',
       responses: {
-        200: z.custom<typeof courses.$inferSelect & { 
+        200: z.custom<typeof courses.$inferSelect & {
           modules: (typeof modules.$inferSelect & { lessons: typeof lessons.$inferSelect[] })[],
-          assignments: typeof assignments.$inferSelect[] 
+          assignments: typeof assignments.$inferSelect[],
+          completedLessonIds: number[]
         }>(),
         404: errorSchemas.notFound,
       },
@@ -101,7 +103,10 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/courses',
-      input: insertCourseSchema,
+      input: insertCourseSchema.extend({
+        organizationId: z.number().optional(),
+        instructorId: z.number().optional(),
+      }),
       responses: {
         201: z.custom<typeof courses.$inferSelect>(),
         400: errorSchemas.validation,
@@ -138,6 +143,19 @@ export const api = {
       input: insertLessonSchema.omit({ moduleId: true }),
       responses: {
         201: z.custom<typeof lessons.$inferSelect>(),
+        403: errorSchemas.unauthorized,
+      },
+    },
+  },
+
+  // === LESSON COMPLETIONS ===
+  lessonCompletions: {
+    update: {
+      method: 'POST' as const,
+      path: '/api/courses/:courseId/lessons/:lessonId/complete',
+      input: z.object({ completed: z.boolean() }),
+      responses: {
+        200: z.object({ success: z.boolean(), xpGained: z.number().optional() }),
         403: errorSchemas.unauthorized,
       },
     },
@@ -183,7 +201,109 @@ export const api = {
       },
     },
   },
-  
+
+
+
+
+
+  // === COMMENTS ===
+  comments: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/lessons/:lessonId/comments',
+      responses: {
+        200: z.array(z.custom<typeof comments.$inferSelect & { user: typeof users.$inferSelect; replies: (typeof comments.$inferSelect & { user: typeof users.$inferSelect })[] }>()),
+        403: errorSchemas.unauthorized,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/lessons/:lessonId/comments',
+      input: insertCommentSchema.pick({ content: true, parentId: true }),
+      responses: {
+        201: z.custom<typeof comments.$inferSelect>(),
+        403: errorSchemas.unauthorized,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/comments/:id',
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        403: errorSchemas.unauthorized,
+      },
+    },
+  },
+
+  // === ADMIN ===
+  admin: {
+    stats: {
+      method: 'GET' as const,
+      path: '/api/admin/stats',
+      responses: {
+        200: z.object({
+          totalUsers: z.number(),
+          totalCourses: z.number(),
+          totalEnrollments: z.number(),
+        }),
+        403: errorSchemas.unauthorized,
+      },
+    },
+
+    users: {
+      create: {
+        method: "POST" as const,
+        path: "/api/admin/users",
+        input: z.object({
+          username: z.string().min(3),
+          password: z.string().min(6),
+          name: z.string().min(2),
+          email: z.string().email(),
+          role: z.enum(["org_admin", "instructor", "ta", "student"]),
+          organizationId: z.number().optional()
+        }),
+        responses: {
+          201: z.custom<typeof users.$inferSelect>(),
+          403: errorSchemas.unauthorized,
+          400: errorSchemas.validation
+        }
+      },
+      list: {
+        method: 'GET' as const,
+        path: '/api/admin/users',
+        responses: {
+          200: z.array(z.custom<typeof users.$inferSelect>()),
+          403: errorSchemas.unauthorized,
+        },
+      },
+      updateRole: {
+        method: 'PATCH' as const,
+        path: '/api/admin/users/:id/role',
+        input: z.object({ role: z.enum(["student", "instructor", "ta", "super_admin", "org_admin"]) }),
+        responses: {
+          200: z.custom<typeof users.$inferSelect>(),
+          403: errorSchemas.unauthorized,
+        },
+      },
+    },
+    reports: {
+      progress: {
+        method: 'GET' as const,
+        path: '/api/admin/reports/progress',
+        responses: {
+          200: z.array(z.object({
+            user: z.custom<typeof users.$inferSelect>(),
+            course: z.custom<typeof courses.$inferSelect>(),
+            progress: z.number(),
+            completed: z.boolean(),
+            enrolledAt: z.string().nullable(),
+          })),
+          403: errorSchemas.unauthorized,
+        },
+      },
+    },
+  },
+
   // === ENROLLMENTS ===
   enrollments: {
     create: {

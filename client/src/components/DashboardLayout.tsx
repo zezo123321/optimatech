@@ -119,6 +119,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <p className="text-xs text-muted-foreground truncate">{user?.role?.replace('_', ' ')}</p>
             </div>
           </div>
+
+          {/* Gamification / XP Bar */}
+          {user?.role === "student" && (
+            <div className="px-2 mb-4">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-bold text-primary">Level {Math.floor((user.xp || 0) / 100) + 1}</span>
+                <span className="text-muted-foreground">{(user.xp || 0) % 100} / 100 XP</span>
+              </div>
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-indigo-500 rounded-full transition-all duration-500"
+                  style={{ width: `${(user.xp || 0) % 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           <button
             onClick={() => logout()}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border bg-background hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30 transition-all text-sm font-medium text-muted-foreground"
