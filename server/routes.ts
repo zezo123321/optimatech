@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth } from "./auth";
-import { users, comments } from "@shared/schema";
+import { users, comments, organizations } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull } from "drizzle-orm";
 import multer from "multer";
@@ -715,8 +715,32 @@ export async function registerRoutes(
   // Seed Data function (safe to run multiple times, checks existence)
   await seedData();
 
+  // TMP FIX ROUTE
+  app.get("/api/admin/fix-orgs", async (req, res) => {
+    try {
+      const demoOrg = await db.query.organizations.findFirst({
+        where: eq(organizations.slug, "demo")
+      });
+      if (!demoOrg) return res.status(404).json({ message: "Demo org not found" });
+
+      const result = await db.update(users)
+        .set({ organizationId: demoOrg.id })
+        .where(isNull(users.organizationId))
+        .returning();
+
+      res.json({
+        message: "Fixed users",
+        count: result.length,
+        users: result.map(u => u.username)
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   return httpServer;
 }
+
 
 async function seedData() {
   // Only seed if no organizations exist
@@ -740,14 +764,32 @@ async function seedData() {
     // that isn't linked to Replit Auth just for data display)
 
     // Create a system instructor for demo content
-    const [instructor] = await db.insert(users).values({
-      email: "instructor@tadreeb.link",
-      username: "instructor",
-      password: "c30d8e85a67ed0ab9d0c045c1b93575109c36963f2f1a6adf27fa18cad31f77a55ae2922122e29028d3dd270d40eaaed757ce2069740814b875bb15728e856ba.8afd495676f3c2b1a72dd4cb7afb0f7b",
-      name: "Demo Instructor",
-      role: "instructor",
-      organizationId: org.id,
-    }).returning();
+    // Create a system instructor for demo content
+    let instructor = await storage.getUserByUsername("instructor");
+    if (!instructor) {
+      // Check by email as fallback or ensure uniqueness
+      const existingEmail = await db.query.users.findFirst({
+        where: eq(users.email, "instructor@tadreeb.link")
+      });
+
+      if (existingEmail) {
+        instructor = existingEmail;
+        // Optionally update orgId if null?
+        if (!instructor.organizationId) {
+          await storage.updateUser(instructor.id, { organizationId: org.id });
+        }
+      } else {
+        const [newInstructor] = await db.insert(users).values({
+          email: "instructor@tadreeb.link",
+          username: "instructor",
+          password: "c30d8e85a67ed0ab9d0c045c1b93575109c36963f2f1a6adf27fa18cad31f77a55ae2922122e29028d3dd270d40eaaed757ce2069740814b875bb15728e856ba.8afd495676f3c2b1a72dd4cb7afb0f7b",
+          name: "Demo Instructor",
+          role: "instructor",
+          organizationId: org.id,
+        }).returning();
+        instructor = newInstructor;
+      }
+    }
 
     const course = await storage.createCourse({
       organizationId: org.id,
