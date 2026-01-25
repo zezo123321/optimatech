@@ -30,7 +30,7 @@ export async function setupAuth(app: Express) {
         store: storage.sessionStore,
         cookie: {
             secure: app.get("env") === "production",
-            sameSite: "lax",
+            sameSite: app.get("env") === "production" ? "none" : "lax",
             httpOnly: true,
             maxAge: 24 * 60 * 60 * 1000 // 1 day
         }

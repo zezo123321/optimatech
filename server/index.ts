@@ -13,7 +13,16 @@ const httpServer = createServer(app);
 // Serve uploaded files statically - GLOBAL MIDDLEWARE
 console.log("Initializing static file serving...");
 app.use(cors({
-  origin: true, // Allow any origin for now (or explicit domain in production)
+  origin: (origin, callback) => {
+    // In production, allow specific origin or fallback to true (reflection) if trusted.
+    // User should set ALLOWED_ORIGIN in .env
+    const allowedOrigin = process.env.ALLOWED_ORIGIN;
+    if (!origin || !allowedOrigin || origin === allowedOrigin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
 app.use("/uploads", express.static(join(process.cwd(), "uploads")));
