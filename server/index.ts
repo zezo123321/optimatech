@@ -15,8 +15,8 @@ console.log("Initializing static file serving...");
 app.use(cors({
   origin: (origin, callback) => {
     // In production, allow specific origin or fallback to true (reflection) if trusted.
-    // User should set ALLOWED_ORIGIN in .env
-    const allowedOrigin = process.env.ALLOWED_ORIGIN;
+    // User should set CLIENT_URL in .env
+    const allowedOrigin = process.env.CLIENT_URL;
     if (!origin || !allowedOrigin || origin === allowedOrigin) {
       callback(null, true);
     } else {

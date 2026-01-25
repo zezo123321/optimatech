@@ -28,6 +28,7 @@ export async function setupAuth(app: Express) {
         resave: false,
         saveUninitialized: false,
         store: storage.sessionStore,
+        proxy: true, // Required for Railway/Cloudflare load balancers
         cookie: {
             secure: app.get("env") === "production",
             sameSite: app.get("env") === "production" ? "none" : "lax",
