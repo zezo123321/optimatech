@@ -5,11 +5,17 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { join } from "path";
 
+import cors from "cors";
 const app = express();
+app.set("trust proxy", 1);
 const httpServer = createServer(app);
 
 // Serve uploaded files statically - GLOBAL MIDDLEWARE
 console.log("Initializing static file serving...");
+app.use(cors({
+  origin: true, // Allow any origin for now (or explicit domain in production)
+  credentials: true
+}));
 app.use("/uploads", express.static(join(process.cwd(), "uploads")));
 
 declare module "http" {

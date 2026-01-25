@@ -28,11 +28,14 @@ export async function setupAuth(app: Express) {
         resave: false,
         saveUninitialized: false,
         store: storage.sessionStore,
+        cookie: {
+            secure: app.get("env") === "production",
+            sameSite: "lax",
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
+        }
     };
 
-    if (app.get("env") === "production") {
-        app.set("trust proxy", 1);
-    }
 
     app.use(session(sessionSettings));
     app.use(passport.initialize());
