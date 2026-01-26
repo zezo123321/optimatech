@@ -28,10 +28,7 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "../dist/public"), // relative to client root actually? No, import.meta.dirname is root of vite.config.ts usually if it's in root. 
-    // vite.config.ts is in root /home/techno/Downloads/optimatech-training/vite.config.ts
-    // server builds to /dist
-    // we want client to be in /dist/public
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
   server: {
