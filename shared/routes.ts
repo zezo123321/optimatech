@@ -9,7 +9,8 @@ import {
   insertSubmissionSchema,
   gradeSubmissionSchema,
   insertCommentSchema,
-  users, organizations, courses, modules, lessons, enrollments, assignments, submissions, comments
+  insertInstructorRequestSchema,
+  users, organizations, courses, modules, lessons, enrollments, assignments, submissions, comments, instructorRequests
 } from './schema';
 
 export const errorSchemas = {
@@ -302,6 +303,46 @@ export const api = {
         },
       },
     },
+  },
+
+  // === INSTRUCTOR REQUESTS ===
+  instructorRequests: {
+    create: {
+      method: "POST" as const,
+      path: "/api/instructor-requests",
+      input: insertInstructorRequestSchema.pick({ bio: true }).extend({
+        linkedinUrl: z.string().optional().or(z.literal(""))
+      }),
+      responses: {
+        201: z.custom<typeof instructorRequests.$inferSelect>(),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized
+      }
+    },
+    list: {
+      method: "GET" as const,
+      path: "/api/admin/instructor-requests",
+      responses: {
+        200: z.array(z.custom<typeof instructorRequests.$inferSelect & { user: typeof users.$inferSelect }>()),
+        403: errorSchemas.unauthorized
+      }
+    },
+    approve: {
+      method: "POST" as const,
+      path: "/api/admin/instructor-requests/:id/approve",
+      responses: {
+        200: z.custom<typeof instructorRequests.$inferSelect>(),
+        403: errorSchemas.unauthorized
+      }
+    },
+    reject: {
+      method: "POST" as const,
+      path: "/api/admin/instructor-requests/:id/reject",
+      responses: {
+        200: z.custom<typeof instructorRequests.$inferSelect>(),
+        403: errorSchemas.unauthorized
+      }
+    }
   },
 
   // === ENROLLMENTS ===

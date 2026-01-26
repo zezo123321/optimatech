@@ -738,6 +738,69 @@ export async function registerRoutes(
     }
   });
 
+  // === INSTRUCTOR REQUESTS ===
+  app.post(api.instructorRequests.create.path, requireAuth, async (req: any, res) => {
+    try {
+      const input = api.instructorRequests.create.input.parse(req.body);
+
+      // Check if already requested
+      const existing = await storage.getInstructorRequests(); // This gets ALL, inefficient.
+      // Better: check by user ID. I need to add that method or filter.
+      // For MVP: Filter in memory or add helper.
+      // Let's refine logical flow:
+      const allRequests = await storage.getInstructorRequests();
+      const userRequest = allRequests.find(r => r.userId === req.user.id && r.status === 'pending');
+
+      if (userRequest) {
+        return res.status(400).json({ message: "You already have a pending application" });
+      }
+
+      const request = await storage.createInstructorRequest({
+        userId: req.user.id,
+        ...input
+      });
+      res.status(201).json(request);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get(api.instructorRequests.list.path, requireAdmin, async (req, res) => {
+    const requests = await storage.getInstructorRequests('pending');
+    res.json(requests);
+  });
+
+  app.post(api.instructorRequests.approve.path, requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    const request = await storage.getInstructorRequest(id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
+
+    // Update Request Status
+    const updatedRequest = await storage.updateInstructorRequest(id, "approved");
+
+    // Update User Role to Instructor
+    // Should we overwrite organization? Explicitly NO, they keep their org (e.g. they are students in a company).
+    // But usually "Instructors" in B2B might be specific.
+    // For "Independent" (B2C), they definitely become instructors.
+    // If they are in an Org, they become an Instructor for that Org.
+
+    await storage.updateUser(request.userId, { role: "instructor" });
+
+    res.json(updatedRequest);
+  });
+
+  app.post(api.instructorRequests.reject.path, requireAdmin, async (req, res) => {
+    const id = Number(req.params.id);
+    const request = await storage.getInstructorRequest(id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
+
+    const updatedRequest = await storage.updateInstructorRequest(id, "rejected");
+    res.json(updatedRequest);
+  });
+
   return httpServer;
 }
 

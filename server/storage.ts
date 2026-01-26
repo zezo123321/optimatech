@@ -8,7 +8,8 @@ import {
   type Enrollment,
   type Assignment, type InsertAssignment,
   type Submission, type InsertSubmission, type GradeSubmission,
-  lessonCompletions // Added
+  lessonCompletions,
+  instructorRequests, type InsertInstructorRequest, type InstructorRequest
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
@@ -77,6 +78,12 @@ export interface IStorage {
   addCourseStaff(courseId: number, userId: number, role: string): Promise<void>;
   removeCourseStaff(courseId: number, userId: number): Promise<void>;
   getCourseStaff(courseId: number): Promise<(User & { role: string })[]>;
+
+  // Instructor Requests
+  createInstructorRequest(request: InsertInstructorRequest): Promise<InstructorRequest>;
+  getInstructorRequests(status?: string): Promise<(InstructorRequest & { user: User })[]>;
+  getInstructorRequest(id: number): Promise<InstructorRequest | undefined>;
+  updateInstructorRequest(id: number, status: string): Promise<InstructorRequest>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -413,7 +420,41 @@ export class DatabaseStorage implements IStorage {
 
     return results.map(r => ({ ...r.user, role: r.role as any }));
   }
-}
 
+  // === INSTRUCTOR REQUESTS ===
+  async createInstructorRequest(request: InsertInstructorRequest): Promise<InstructorRequest> {
+    const [newRequest] = await db.insert(instructorRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async getInstructorRequests(status?: string): Promise<(InstructorRequest & { user: User })[]> {
+    const query = db.select({
+      request: instructorRequests,
+      user: users
+    })
+      .from(instructorRequests)
+      .innerJoin(users, eq(instructorRequests.userId, users.id));
+
+    if (status) {
+      query.where(eq(instructorRequests.status, status));
+    }
+
+    const results = await query;
+    return results.map(r => ({ ...r.request, user: r.user }));
+  }
+
+  async getInstructorRequest(id: number): Promise<InstructorRequest | undefined> {
+    const [request] = await db.select().from(instructorRequests).where(eq(instructorRequests.id, id));
+    return request;
+  }
+
+  async updateInstructorRequest(id: number, status: string): Promise<InstructorRequest> {
+    const [updated] = await db.update(instructorRequests)
+      .set({ status })
+      .where(eq(instructorRequests.id, id))
+      .returning();
+    return updated;
+  }
+}
 
 export const storage = new DatabaseStorage();

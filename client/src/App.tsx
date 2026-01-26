@@ -12,6 +12,8 @@ import Register from "@/pages/auth/Register";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import InstructorDashboard from "@/pages/instructor/InstructorDashboard";
+import BecomeInstructor from "@/pages/instructor/BecomeInstructor"; // New
+import InstructorRequests from "@/pages/admin/InstructorRequests"; // New
 import CourseEditor from "@/pages/instructor/CourseEditor";
 import CoursePlayer from "@/pages/student/CoursePlayer";
 import CoursesPage from "@/pages/student/CoursesPage";
@@ -68,6 +70,9 @@ function Router() {
       <Route path="/admin-dashboard">
         {() => <ProtectedRoute component={AdminDashboard} allowedRoles={['admin', 'super_admin', 'org_admin']} />}
       </Route>
+      <Route path="/admin/requests">
+        {() => <ProtectedRoute component={InstructorRequests} allowedRoles={['admin', 'super_admin', 'org_admin']} />}
+      </Route>
 
       {/* Instructor Routes */}
       <Route path="/instructor-dashboard">
@@ -85,6 +90,9 @@ function Router() {
       {/* Student Routes */}
       <Route path="/dashboard">
         {() => <ProtectedRoute component={StudentDashboard} allowedRoles={['student']} />}
+      </Route>
+      <Route path="/instructor/become">
+        {() => <ProtectedRoute component={BecomeInstructor} allowedRoles={['student', 'instructor', 'org_admin', 'super_admin']} />}
       </Route>
 
       <Route path="/learn/:id">

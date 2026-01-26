@@ -34,6 +34,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           { icon: BookOpen, label: "Manage Courses", href: "/admin/courses" },
           { icon: Users, label: "Students", href: "/admin/students" },
           { icon: LineChart, label: "Analytics", href: "/admin/analytics" },
+          { icon: Users, label: "Requests", href: "/admin/requests" },
         ];
       case "instructor":
         return [
@@ -43,11 +44,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         ];
       case "student":
       default:
-        return [
+        // Only show "Become Instructor" (Request Contact) if user is NOT part of a specific B2B organization
+        // Or if we define "Independent" users as organizationId === null.
+        // Assuming current seed data, Independent users might be created with organizationId = null.
+        // Let's protect the link.
+
+        const items = [
           { icon: LayoutDashboard, label: "My Learning", href: "/dashboard" },
           { icon: BookOpen, label: "Browse Courses", href: "/courses" },
           { icon: LineChart, label: "My Progress", href: "/progress" },
         ];
+
+        // Ensure user is not null before checking organizationId
+        // If user.organizationId is null (or undefined), they are independent.
+        // NOTE: In seed_production.ts, we assigned orgId to everyone.
+        // We need to support independent users who have organizationId === null.
+        if (!user?.organizationId) {
+          items.push({ icon: GraduationCap, label: "Become Instructor", href: "/instructor/become" });
+        }
+
+        return items;
     }
   };
 

@@ -290,6 +290,28 @@ export type AnalyticsResponse = {
   averageScore: number;
 };
 
+
+// === REQUESTS ===
+export const instructorRequests = pgTable("instructor_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  bio: text("bio").notNull(),
+  linkedinUrl: text("linkedin_url"),
+  status: text("status").default("pending").notNull(),   // pending, approved, rejected
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const instructorRequestsRelations = relations(instructorRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [instructorRequests.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertInstructorRequestSchema = createInsertSchema(instructorRequests).omit({ id: true, createdAt: true, status: true });
+export type InsertInstructorRequest = z.infer<typeof insertInstructorRequestSchema>;
+export type InstructorRequest = typeof instructorRequests.$inferSelect;
+
 export type CourseWithModules = Course & {
   modules: (Module & { lessons: Lesson[] })[];
   assignments: Assignment[];
