@@ -21,13 +21,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useAdminStats, useAllUsers, useUpdateUserRole } from "@/hooks/use-admin";
-import { Loader2, TrendingUp, Users, BookOpen, GraduationCap, MoreHorizontal, Shield, FileBarChart } from "lucide-react";
+import { Loader2, TrendingUp, Users, BookOpen, GraduationCap, MoreHorizontal, Shield, FileBarChart, Filter, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { User, Course } from "@shared/schema";
 import { format } from "date-fns";
 import { CreateUserDialog } from "./CreateUserDialog";
+import { BulkImportDialog } from "./BulkImportDialog";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Type definition for report
 type ReportItem = {
@@ -52,8 +57,11 @@ function ReportsTab() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Training Progress Report</CardTitle>
+        <Button variant="outline" size="sm" onClick={() => window.open('/api/admin/reports/export', '_blank')}>
+          <FileBarChart className="mr-2 h-4 w-4" /> Export CSV
+        </Button>
       </CardHeader>
       <CardContent>
         <Table>
@@ -145,6 +153,9 @@ export default function AdminDashboard() {
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileBarChart className="w-4 h-4" /> Reports
           </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" /> Branding
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-8">
@@ -194,7 +205,25 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>User Management</CardTitle>
-              <CreateUserDialog />
+              <div className="flex gap-2">
+                {/* LC Filter Dropdown Placeholder - In real implementation, this would use a state filter */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="hidden md:flex">
+                      <Filter className="mr-2 h-4 w-4" /> Filter by LC
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>All LCs</DropdownMenuItem>
+                    <DropdownMenuItem>Cairo</DropdownMenuItem>
+                    <DropdownMenuItem>Mansoura</DropdownMenuItem>
+                    {/* Dynamic list should go here */}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <BulkImportDialog />
+                <CreateUserDialog />
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -256,8 +285,147 @@ export default function AdminDashboard() {
         <TabsContent value="reports">
           <ReportsTab />
         </TabsContent>
+
+        <TabsContent value="settings">
+          <OrgSettingsTab />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function OrgSettingsTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+
+  // Use a query to get fresh org data if needed, or rely on user context
+  // For MVP, since user.organization is populated on login/refresh, we'll try to use that.
+  // But updating it requires a refresh. 
+
+  const [formData, setFormData] = useState({
+    certificateLogoUrl: "",
+    certificateSignatureUrl: "",
+    certificateSignerName: "",
+    certificateSignerTitle: "",
+    certificateTemplateUrl: ""
+  });
+
+  useEffect(() => {
+    if (user?.organization) {
+      setFormData({
+        certificateLogoUrl: user.organization.certificateLogoUrl || "",
+        certificateSignatureUrl: user.organization.certificateSignatureUrl || "",
+        certificateSignerName: user.organization.certificateSignerName || "",
+        certificateSignerTitle: user.organization.certificateSignerTitle || "",
+        certificateTemplateUrl: user.organization.certificateTemplateUrl || ""
+      });
+    }
+  }, [user]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiRequest("PATCH", "/api/organizations/current", formData);
+      if (!res.ok) throw new Error("Failed to update");
+
+      // Force refresh user to update organization context in UI
+      await queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
+
+      toast({
+        title: "Settings Saved",
+        description: "Organization branding updated successfully. New certificates will use these settings.",
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Organization Branding</CardTitle>
+        <div className="text-sm text-muted-foreground">
+          Customize your certificate appearance. Assets (Logo, Signature) will be used for all new certificates.
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Organization Logo URL</label>
+            <input
+              name="certificateLogoUrl"
+              value={formData.certificateLogoUrl}
+              onChange={handleChange}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              placeholder="https://example.com/logo.png"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Digital Signature URL</label>
+            <input
+              name="certificateSignatureUrl"
+              value={formData.certificateSignatureUrl}
+              onChange={handleChange}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              placeholder="https://example.com/signature.png"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Signer Name</label>
+            <input
+              name="certificateSignerName"
+              value={formData.certificateSignerName}
+              onChange={handleChange}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              placeholder="e.g. Dr. Ahmed Ali"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Signer Title</label>
+            <input
+              name="certificateSignerTitle"
+              value={formData.certificateSignerTitle}
+              onChange={handleChange}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              placeholder="e.g. President, IFMSA-Egypt"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Custom Certificate Template URL (Background Image)</label>
+          <input
+            name="certificateTemplateUrl"
+            value={formData.certificateTemplateUrl}
+            onChange={handleChange}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            placeholder="https://..."
+          />
+          <p className="text-[0.8rem] text-muted-foreground">
+            Optional. Leave empty to use the default <strong>Marble & Gold</strong> premium design.
+          </p>
+        </div>
+
+        <div className="pt-4">
+          <Button onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Save Branding Settings
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

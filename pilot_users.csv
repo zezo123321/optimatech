@@ -1,0 +1,3 @@
+username,password,role,name,email,lc,level
+pilot_student_1,123456,student,Pilot Student One,pilot1@ifmsa.org,Cairo,1
+pilot_student_2,123456,student,Pilot Student Two,pilot2@ifmsa.org,Alex,1

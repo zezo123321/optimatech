@@ -1,0 +1,3 @@
+username,email,password,role,name,user_code,lc
+test_cairo_1,cairo1@ifmsa.org,pass123,student,Cairo Student,C001,Cairo
+test_mansoura_1,mansoura1@ifmsa.org,pass123,student,Mans User,M001,Mansoura

@@ -16,8 +16,11 @@ import BecomeInstructor from "@/pages/instructor/BecomeInstructor"; // New
 import InstructorRequests from "@/pages/admin/InstructorRequests"; // New
 import CourseEditor from "@/pages/instructor/CourseEditor";
 import CoursePlayer from "@/pages/student/CoursePlayer";
+import MyProgress from "@/pages/student/MyProgress"; // New
 import CoursesPage from "@/pages/student/CoursesPage";
 import NotFound from "@/pages/not-found";
+import Forbidden from "@/pages/forbidden";
+import CertificateView from "@/pages/student/CertificateView";
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType, allowedRoles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -35,11 +38,7 @@ function ProtectedRoute({ component: Component, allowedRoles }: { component: Rea
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard if role mismatch
-    if (user.role === 'student') return <Redirect to="/dashboard" />;
-    if (['instructor', 'ta', 'co-instructor'].includes(user.role)) return <Redirect to="/instructor-dashboard" />;
-    if (['admin', 'super_admin', 'org_admin'].includes(user.role)) return <Redirect to="/admin-dashboard" />;
-    return <Redirect to="/dashboard" />;
+    return <Forbidden />;
   }
 
   return <Component />;
@@ -103,7 +102,14 @@ function Router() {
         {() => <ProtectedRoute component={CoursesPage} allowedRoles={['student']} />}
       </Route>
 
-      {/* Fallback */}
+      <Route path="/progress">
+        {() => <ProtectedRoute component={MyProgress} allowedRoles={['student']} />}
+      </Route>
+
+      {/* Public Certificate Validations */}
+      <Route path="/certificate/:code" component={CertificateView} />
+
+      {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
   );

@@ -59,9 +59,9 @@ export function CourseCard({ course, progress, role, isEnrolled, onEnroll, isLoa
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider">
             {!course.published && (
-              <span className="px-2 py-1 rounded-md bg-yellow-100/50 text-yellow-700 border border-yellow-200">Draft</span>
+              <span className="px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">Draft</span>
             )}
-            <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100">Course</span>
+            <span className="px-2 py-1 rounded-md bg-primary/10 text-primary border border-primary/20">Course</span>
           </div>
           <h3 className="text-xl font-display font-bold text-foreground mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">
             {course.title}

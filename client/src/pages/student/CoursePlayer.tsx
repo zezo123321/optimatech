@@ -3,10 +3,14 @@ import { useCourse, useToggleLessonCompletion } from "@/hooks/use-courses";
 import { Loader2, ChevronLeft, CheckCircle, Circle, PlayCircle, FileText, Download, Check } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { Lesson, Module } from "@shared/schema";
+import { Lesson } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import LessonDiscussion from "@/components/student/LessonDiscussion";
+import QuizTaker from "@/components/student/QuizTaker";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
+import { Award } from "lucide-react";
 
 export default function CoursePlayer() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +18,7 @@ export default function CoursePlayer() {
   const { data: course, isLoading } = useCourse(courseId);
   const toggleCompletion = useToggleLessonCompletion();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
@@ -76,9 +81,28 @@ export default function CoursePlayer() {
     } catch (error) {
       toast({ title: "Error", description: "Failed to update progress.", variant: "destructive" });
     }
+
+
+  };
+
+  const claimCertificate = async () => {
+    try {
+      const res = await apiRequest("POST", "/api/certificates", { courseId });
+      const cert = await res.json();
+      window.open(`/certificate/${cert.code}`, '_blank');
+      toast({ title: "Certificate Claimed!", description: "Your certificate opens in a new tab." });
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to claim certificate.", variant: "destructive" });
+    }
   };
 
   const isCurrentLessonCompleted = activeLesson && course?.completedLessonIds?.includes(activeLesson.id);
+
+  // Dynamic Back Link Logic
+  const backLink = user?.role === 'student' ? '/dashboard' :
+    user?.role === 'instructor' ? '/instructor-dashboard' :
+      ['admin', 'super_admin', 'org_admin'].includes(user?.role || '') ? '/admin-dashboard' : '/dashboard';
+
 
   if (isLoading) {
     return (
@@ -93,7 +117,7 @@ export default function CoursePlayer() {
       <div className="h-screen w-full flex items-center justify-center bg-background">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Course not found</h2>
-          <Link href="/dashboard" className="text-primary hover:underline">Go back to dashboard</Link>
+          <Link href={backLink} className="text-primary hover:underline">Go back to dashboard</Link>
         </div>
       </div>
     );
@@ -104,7 +128,7 @@ export default function CoursePlayer() {
       {/* Top Bar */}
       <header className="h-16 border-b border-border bg-white px-4 flex items-center justify-between flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard">
+          <Link href={backLink}>
             <div className="p-2 hover:bg-muted rounded-full cursor-pointer transition-colors text-muted-foreground hover:text-foreground">
               <ChevronLeft size={24} />
             </div>
@@ -115,6 +139,11 @@ export default function CoursePlayer() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
+          {progressPercent === 100 && (
+            <Button size="sm" onClick={claimCertificate} className="hidden md:flex gap-2 animate-in fade-in zoom-in duration-500">
+              <Award className="w-4 h-4" /> Claim Certificate
+            </Button>
+          )}
           <div className="flex flex-col items-end min-w-[120px]">
             <div className="flex items-center justify-between w-full mb-1">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Progress</span>
@@ -128,7 +157,7 @@ export default function CoursePlayer() {
             </div>
           </div>
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-            U
+            {user?.name?.[0] || 'U'}
           </div>
         </div>
       </header>
@@ -234,28 +263,42 @@ export default function CoursePlayer() {
                       </div>
                     </div>
                   )}
+
+                  {activeLesson.type === 'quiz' && (
+                    <div className="my-8">
+                      <QuizTaker
+                        lessonId={activeLesson.id}
+                        courseId={courseId}
+                        onComplete={() => {
+                          // Optional: Trigger any other effects like confetti or auto-advance
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* Navigation Buttons */}
-                <div className="flex justify-between pt-10 border-t border-border mt-10">
-                  {/* Previous Button Placeholder */}
-                  <div />
+                {/* Navigation Buttons - Hide for Quiz as it has its own flow */}
+                {activeLesson.type !== 'quiz' && (
+                  <div className="flex justify-between pt-10 border-t border-border mt-10">
+                    {/* Previous Button Placeholder */}
+                    <div />
 
-                  <Button
-                    size="lg"
-                    onClick={handleToggleComplete}
-                    disabled={toggleCompletion.isPending}
-                    variant={isCurrentLessonCompleted ? "outline" : "default"}
-                    className={cn("gap-2 shadow-lg transition-all", isCurrentLessonCompleted && "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800")}
-                  >
-                    {toggleCompletion.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {isCurrentLessonCompleted ? (
-                      <>Completed <Check size={18} /></>
-                    ) : (
-                      <>Mark as Complete <CheckCircle size={18} /></>
-                    )}
-                  </Button>
-                </div>
+                    <Button
+                      size="lg"
+                      onClick={handleToggleComplete}
+                      disabled={toggleCompletion.isPending}
+                      variant={isCurrentLessonCompleted ? "outline" : "default"}
+                      className={cn("gap-2 shadow-lg transition-all", isCurrentLessonCompleted && "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800")}
+                    >
+                      {toggleCompletion.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {isCurrentLessonCompleted ? (
+                        <>Completed <Check size={18} /></>
+                      ) : (
+                        <>Mark as Complete <CheckCircle size={18} /></>
+                      )}
+                    </Button>
+                  </div>
+                )}
 
                 {/* Lesson Discussion / Q&A */}
                 <LessonDiscussion lessonId={activeLesson.id} />
@@ -271,7 +314,7 @@ export default function CoursePlayer() {
             )}
           </div>
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

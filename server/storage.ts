@@ -9,7 +9,10 @@ import {
   type Assignment, type InsertAssignment,
   type Submission, type InsertSubmission, type GradeSubmission,
   lessonCompletions,
-  instructorRequests, type InsertInstructorRequest, type InstructorRequest
+  instructorRequests, type InsertInstructorRequest, type InstructorRequest,
+  quizQuestions, quizAttempts,
+  type QuizQuestion, type InsertQuizQuestion, type QuizAttempt, type InsertQuizAttempt,
+  certificates, type Certificate, type InsertCertificate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
@@ -24,11 +27,13 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  createUsersBulk(users: InsertUser[]): Promise<User[]>; // Bulk Import
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
   getOrganization(id: number): Promise<Organization | undefined>;
   getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
   getOrganizationByAccessCode(code: string): Promise<Organization | undefined>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
+  updateOrganization(id: number, org: Partial<InsertOrganization>): Promise<Organization>;
   sessionStore: session.Store;
 
   // Courses
@@ -81,13 +86,26 @@ export interface IStorage {
 
   // Instructor Requests
   createInstructorRequest(request: InsertInstructorRequest): Promise<InstructorRequest>;
+  updateInstructorRequest(id: number, status: string): Promise<InstructorRequest>;
   getInstructorRequests(status?: string): Promise<(InstructorRequest & { user: User })[]>;
   getInstructorRequest(id: number): Promise<InstructorRequest | undefined>;
-  updateInstructorRequest(id: number, status: string): Promise<InstructorRequest>;
+  // ... inside IStorage interface
+  // Quiz
+  createQuizQuestion(question: InsertQuizQuestion): Promise<QuizQuestion>;
+  getQuizQuestions(lessonId: number): Promise<QuizQuestion[]>;
+  deleteQuizQuestions(lessonId: number): Promise<void>;
+  createQuizAttempt(attempt: InsertQuizAttempt): Promise<QuizAttempt>;
+  getQuizAttempts(userId: number, lessonId: number): Promise<QuizAttempt[]>;
+
+
+  // Certificates
+  createCertificate(cert: InsertCertificate): Promise<Certificate>;
+  getCertificate(code: string): Promise<Certificate | undefined>;
+  getUserCertificates(userId: number): Promise<Certificate[]>;
+  getCertificateByCourse(userId: number, courseId: number): Promise<Certificate | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // === USERS & ORGS ===
   sessionStore: session.Store;
 
   constructor() {
@@ -95,6 +113,50 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true
     });
+  }
+
+  async createQuizQuestion(question: InsertQuizQuestion): Promise<QuizQuestion> {
+    const [newItem] = await db.insert(quizQuestions).values(question).returning();
+    return newItem;
+  }
+
+  async getQuizQuestions(lessonId: number): Promise<QuizQuestion[]> {
+    return await db.select().from(quizQuestions).where(eq(quizQuestions.lessonId, lessonId)).orderBy(quizQuestions.order);
+  }
+
+  async deleteQuizQuestions(lessonId: number): Promise<void> {
+    await db.delete(quizQuestions).where(eq(quizQuestions.lessonId, lessonId));
+  }
+
+  async createQuizAttempt(attempt: InsertQuizAttempt): Promise<QuizAttempt> {
+    const [newItem] = await db.insert(quizAttempts).values(attempt).returning();
+    return newItem;
+  }
+
+  async getQuizAttempts(userId: number, lessonId: number): Promise<QuizAttempt[]> {
+    return await db.select().from(quizAttempts)
+      .where(and(eq(quizAttempts.userId, userId), eq(quizAttempts.lessonId, lessonId)))
+      .orderBy(desc(quizAttempts.completedAt));
+  }
+
+  async createCertificate(cert: InsertCertificate): Promise<Certificate> {
+    const [newItem] = await db.insert(certificates).values(cert).returning();
+    return newItem;
+  }
+
+  async getCertificate(code: string): Promise<Certificate | undefined> {
+    const [cert] = await db.select().from(certificates).where(eq(certificates.code, code));
+    return cert;
+  }
+
+  async getUserCertificates(userId: number): Promise<Certificate[]> {
+    return await db.select().from(certificates).where(eq(certificates.userId, userId));
+  }
+
+  async getCertificateByCourse(userId: number, courseId: number): Promise<Certificate | undefined> {
+    const [cert] = await db.select().from(certificates)
+      .where(and(eq(certificates.userId, userId), eq(certificates.courseId, courseId)));
+    return cert;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -122,6 +184,15 @@ export class DatabaseStorage implements IStorage {
     }
     const [newUser] = await db.insert(users).values(userWithCode).returning();
     return newUser;
+  }
+
+  async createUsersBulk(usersList: InsertUser[]): Promise<User[]> {
+    if (usersList.length === 0) return [];
+    // Perform bulk insert using onConflictDoNothing to skip duplicates
+    const newUsers = await db.insert(users).values(usersList)
+      .onConflictDoNothing()
+      .returning();
+    return newUsers;
   }
 
   async getUserByReplitId(replitId: string): Promise<User | undefined> {
@@ -152,6 +223,11 @@ export class DatabaseStorage implements IStorage {
   async createOrganization(org: InsertOrganization): Promise<Organization> {
     const [newOrg] = await db.insert(organizations).values(org).returning();
     return newOrg;
+  }
+
+  async updateOrganization(id: number, update: Partial<InsertOrganization>): Promise<Organization> {
+    const [updated] = await db.update(organizations).set(update).where(eq(organizations.id, id)).returning();
+    return updated;
   }
 
   // === COURSES ===

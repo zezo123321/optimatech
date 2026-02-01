@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
+import Forbidden from "@/pages/forbidden";
 
 const requestSchema = z.object({
     bio: z.string().min(20, "Message must be at least 20 characters long"),
@@ -58,6 +59,10 @@ export default function BecomeInstructor() {
             });
         },
     });
+
+    if (user?.organizationId) {
+        return <Forbidden />;
+    }
 
     if (user?.role === "instructor" || user?.role === "org_admin" || user?.role === "super_admin") {
         return (

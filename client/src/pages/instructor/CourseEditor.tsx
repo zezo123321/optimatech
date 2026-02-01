@@ -1,7 +1,7 @@
 import { useParams } from "wouter";
 import { useCourse, useCreateModule, useCreateLesson } from "@/hooks/use-courses";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Plus, Save, BookOpen, FileText, Video, Trash2, GripVertical, Users, Settings, Layout } from "lucide-react";
+import { Loader2, ArrowLeft, Plus, Save, BookOpen, FileText, Video, Trash2, GripVertical, Users, Settings, Layout, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Switch } from "@/components/ui/switch";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import CourseTeam from "@/components/instructor/CourseTeam";
+import QuizBuilder from "@/components/instructor/QuizBuilder";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useQuery } from "@tanstack/react-query";
@@ -60,6 +61,7 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
 
     const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
     const [isLessonDialogOpen, setIsLessonDialogOpen] = useState<number | null>(null);
+    const [editingQuizLessonId, setEditingQuizLessonId] = useState<number | null>(null);
 
     const queryClient = useQueryClient();
 
@@ -103,6 +105,7 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
         onSuccess: () => {
             toast({ title: "Course updated successfully" });
             queryClient.invalidateQueries({ queryKey: [`/api/courses/${courseId}`] });
+            queryClient.invalidateQueries({ queryKey: ["/api/courses"] }); // Refresh list
         },
         onError: () => {
             toast({ title: "Update failed", variant: "destructive" });
@@ -114,7 +117,8 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
             title,
             description,
             thumbnailUrl,
-            published
+            published,
+            isPublic // Ensure this is sent
         });
     };
 
@@ -319,6 +323,7 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
                                                                             <SelectItem value="text">Text / Article</SelectItem>
                                                                             <SelectItem value="video">Video (YouTube/URL)</SelectItem>
                                                                             <SelectItem value="pdf">PDF Document</SelectItem>
+                                                                            <SelectItem value="quiz">Quiz</SelectItem>
                                                                         </SelectContent>
                                                                     </Select>
                                                                 </div>
@@ -326,7 +331,8 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
                                                                     <Label>
                                                                         {lessonType === "video" ? "Video File (or URL)" :
                                                                             lessonType === "pdf" ? "PDF File (or URL)" :
-                                                                                "Content (Markdown)"}
+                                                                                lessonType === "quiz" ? "Quiz Description (Optional)" :
+                                                                                    "Content (Markdown)"}
                                                                     </Label>
                                                                     {lessonType === "text" ? (
                                                                         <Textarea
@@ -376,7 +382,18 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
                                                                                 onChange={(e) => setLessonContent(e.target.value)}
                                                                                 placeholder={lessonType === "video" ? "https://youtube.com/..." : "https://example.com/document.pdf"}
                                                                             />
+                                                                            <p className="text-xs text-muted-foreground text-center">OR</p>
+                                                                            <Input
+                                                                                value={lessonContent}
+                                                                                onChange={(e) => setLessonContent(e.target.value)}
+                                                                                placeholder={lessonType === "video" ? "https://youtube.com/..." : "https://example.com/document.pdf"}
+                                                                            />
                                                                         </div>
+                                                                    )}
+                                                                    {lessonType === "quiz" && (
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            After creating the lesson, you will be able to add questions and answers.
+                                                                        </p>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -397,12 +414,19 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
                                                                 <Video className="h-4 w-4 text-orange-500" />
                                                             ) : lesson.type === "pdf" ? (
                                                                 <BookOpen className="h-4 w-4 text-purple-500" />
+                                                            ) : lesson.type === "quiz" ? (
+                                                                <CheckCircle className="h-4 w-4 text-green-500" />
                                                             ) : (
                                                                 <FileText className="h-4 w-4 text-blue-500" />
                                                             )}
                                                             <span className="text-sm font-medium">{lesson.title}</span>
                                                         </div>
-                                                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {lesson.type === 'quiz' && canEdit && (
+                                                                <Button variant="outline" size="sm" onClick={() => setEditingQuizLessonId(lesson.id)}>
+                                                                    Edit Questions
+                                                                </Button>
+                                                            )}
                                                             {canEdit && (
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
                                                                     <Trash2 className="h-4 w-4" />
@@ -478,7 +502,7 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
                                     <Switch
                                         checked={isPublic}
                                         onCheckedChange={setIsPublic}
-                                        disabled={!canEdit || isB2BUser} // IP Guard: Disable for B2B
+                                        disabled={!canEdit} // IP Guard: Disable for B2B
                                     />
                                 </div>
 
@@ -493,6 +517,13 @@ export default function CourseEditor({ id: propId }: { id?: string }) {
                     </TabsContent>
                 </Tabs>
             </div>
+            {editingQuizLessonId && (
+                <QuizBuilder
+                    lessonId={editingQuizLessonId}
+                    isOpen={!!editingQuizLessonId}
+                    onClose={() => setEditingQuizLessonId(null)}
+                />
+            )}
         </div>
     );
 }

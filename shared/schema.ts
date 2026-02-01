@@ -5,15 +5,93 @@ import { relations } from "drizzle-orm";
 
 // === ENUMS ===
 export const userRoleEnum = pgEnum("user_role", ["super_admin", "org_admin", "instructor", "ta", "student"]);
-export const lessonTypeEnum = pgEnum("lesson_type", ["video", "pdf", "text"]);
+export const lessonTypeEnum = pgEnum("lesson_type", ["video", "pdf", "text", "quiz"]);
 
-// === USERS & ORGS ===
+// ... (existing code)
+
+export const quizQuestions = pgTable("quiz_questions", {
+  id: serial("id").primaryKey(),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  questionText: text("question_text").notNull(),
+  questionType: text("question_type").notNull(), // 'mcq', 'true_false'
+  options: jsonb("options").notNull(), // Array of { id, text, isCorrect }
+  order: integer("order").notNull(),
+});
+
+export const quizAttempts = pgTable("quiz_attempts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  score: integer("score").notNull(),
+  passed: boolean("passed").default(false),
+  completedAt: timestamp("completed_at").defaultNow(),
+});
+
+export const certificates = pgTable("certificates", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  code: text("code").notNull().unique(), // e.g., "CERT-1234-ABCD"
+  issuedAt: timestamp("issued_at").defaultNow(),
+});
+
+// ... (existing relations)
+
+export const quizQuestionsRelations = relations(quizQuestions, ({ one }) => ({
+  lesson: one(lessons, {
+    fields: [quizQuestions.lessonId],
+    references: [lessons.id],
+  }),
+}));
+
+export const quizAttemptsRelations = relations(quizAttempts, ({ one }) => ({
+  user: one(users, {
+    fields: [quizAttempts.userId],
+    references: [users.id],
+  }),
+  lesson: one(lessons, {
+    fields: [quizAttempts.lessonId],
+    references: [lessons.id],
+  }),
+}));
+
+// ... (existing relations continued)
+
+export const insertQuizQuestionSchema = createInsertSchema(quizQuestions).omit({ id: true });
+export const insertQuizAttemptSchema = createInsertSchema(quizAttempts).omit({ id: true, completedAt: true });
+
+export type QuizQuestion = typeof quizQuestions.$inferSelect;
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
+export type InsertQuizQuestion = z.infer<typeof insertQuizQuestionSchema>;
+export type InsertQuizAttempt = z.infer<typeof insertQuizAttemptSchema>;
+
+export const certificatesRelations = relations(certificates, ({ one }) => ({
+  user: one(users, {
+    fields: [certificates.userId],
+    references: [users.id],
+  }),
+  course: one(courses, {
+    fields: [certificates.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const insertCertificateSchema = createInsertSchema(certificates).omit({ id: true, issuedAt: true });
+export type Certificate = typeof certificates.$inferSelect;
+export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
+
+
 export const organizations = pgTable("organizations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   accessCode: text("access_code"), // e.g. "TADREEB2026"
   logoUrl: text("logo_url"),
+  certificateLogoUrl: text("certificate_logo_url"), // For branding
+  certificateSignerName: text("certificate_signer_name"),
+  certificateSignerTitle: text("certificate_signer_title"), // Added for pilot
+  certificateSignatureUrl: text("certificate_signature_url"),
+  certificateTemplateUrl: text("certificate_template_url"), // Background image override
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -30,6 +108,7 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").default("student").notNull(),
   organizationId: integer("organization_id").references(() => organizations.id),
   xp: integer("xp").default(0).notNull(),
+  lc: text("lc"), // Local Committee (Segmentation)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -37,7 +37,7 @@ export default function Login() {
 
   const form = useForm({
     resolver: zodResolver(z.object({
-      username: z.string().min(1, "Code is required"), // "Code" per user request
+      username: z.string().min(1, "Username is required"),
       password: z.string().min(1, "Password is required")
     })),
     defaultValues: {
@@ -114,7 +114,7 @@ export default function Login() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Code</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter your code" {...field} />
                     </FormControl>
