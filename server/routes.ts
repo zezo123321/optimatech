@@ -120,10 +120,60 @@ export async function registerRoutes(
     }
   });
 
+  // Admin User Management
+  app.get(api.admin.users.list.path, requireAdmin, async (req: any, res) => {
+    try {
+      if (req.user.role === "org_admin") {
+        if (!req.user.organizationId) return res.status(400).json({ message: "No Org Assigned" });
+        const orgUsers = await storage.getUsersByOrg(req.user.organizationId);
+        return res.json(orgUsers);
+      }
+
+      // Super Admin sees all
+      const allUsers = await storage.getAllUsers();
+      res.json(allUsers);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Admin Stats
+  app.get(api.admin.stats.path, requireAdmin, async (req: any, res) => {
+    if (req.user.role === "org_admin") {
+      if (!req.user.organizationId) return res.status(400).json({ message: "No Org Assigned" });
+
+      // Get Org-specific stats
+      // We reuse getOrgAnalytics but format it to match AdminStats structure if needed, or create a specific method
+      // AdminStats expects: totalUsers, totalCourses, totalEnrollments
+      // Let's assume getOrgAnalytics returns relevant partial data, or we just count manually for now to be safe.
+      const orgUsers = await storage.getUsersByOrg(req.user.organizationId);
+      const orgCourses = await storage.getCourses({ organizationId: req.user.organizationId });
+
+      return res.json({
+        totalUsers: orgUsers.length,
+        totalCourses: orgCourses.length,
+        totalEnrollments: 0 // TODO: Add getEnrollmentsByOrg if needed, for now 0 or calculate
+      });
+    }
+
+    const stats = await storage.getAdminStats();
+    res.json(stats);
+  });
+
   app.post("/api/admin/users/bulk", requireAdmin, async (req: any, res) => {
     try {
       const usersData = z.array(insertUserSchema).parse(req.body);
-      const usersWithHashedPasswords = await Promise.all(usersData.map(async (user) => {
+
+      // STRICT TENANT: Force all new users to belong to the admin's organization if they are org_admin
+      // Unless they are super_admin, who can assign any org.
+      const finalUsersData = usersData.map(u => {
+        if (req.user.role === 'org_admin') {
+          return { ...u, organizationId: req.user.organizationId };
+        }
+        return u;
+      });
+
+      const usersWithHashedPasswords = await Promise.all(finalUsersData.map(async (user) => {
         const hashedPassword = await hashPassword(user.password);
         return { ...user, password: hashedPassword };
       }));
@@ -150,6 +200,22 @@ export async function registerRoutes(
     // (Simulated check)
     const analytics = await storage.getOrgAnalytics(Number(req.params.id));
     res.json(analytics);
+  });
+
+  // Get Organization Branding/Details
+  app.get("/api/organizations/current", requireAuth, async (req: any, res) => {
+    try {
+      if (!req.user.organizationId) {
+        return res.status(404).json({ message: "No organization associated with user" });
+      }
+
+      const org = await storage.getOrganization(req.user.organizationId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+
+      res.json(org);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   // Update Organization Branding

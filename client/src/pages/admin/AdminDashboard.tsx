@@ -25,7 +25,7 @@ import { Loader2, TrendingUp, Users, BookOpen, GraduationCap, MoreHorizontal, Sh
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
-import { User, Course } from "@shared/schema";
+import { User, Course, Organization } from "@shared/schema";
 import { format } from "date-fns";
 import { CreateUserDialog } from "./CreateUserDialog";
 import { BulkImportDialog } from "./BulkImportDialog";
@@ -300,9 +300,10 @@ function OrgSettingsTab() {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  // Use a query to get fresh org data if needed, or rely on user context
-  // For MVP, since user.organization is populated on login/refresh, we'll try to use that.
-  // But updating it requires a refresh. 
+  const { data: organization } = useQuery<Organization>({
+    queryKey: ["/api/organizations/current"],
+    enabled: !!user?.organizationId
+  });
 
   const [formData, setFormData] = useState({
     certificateLogoUrl: "",
@@ -313,16 +314,16 @@ function OrgSettingsTab() {
   });
 
   useEffect(() => {
-    if (user?.organization) {
+    if (organization) {
       setFormData({
-        certificateLogoUrl: user.organization.certificateLogoUrl || "",
-        certificateSignatureUrl: user.organization.certificateSignatureUrl || "",
-        certificateSignerName: user.organization.certificateSignerName || "",
-        certificateSignerTitle: user.organization.certificateSignerTitle || "",
-        certificateTemplateUrl: user.organization.certificateTemplateUrl || ""
+        certificateLogoUrl: organization.certificateLogoUrl || "",
+        certificateSignatureUrl: organization.certificateSignatureUrl || "",
+        certificateSignerName: organization.certificateSignerName || "",
+        certificateSignerTitle: organization.certificateSignerTitle || "",
+        certificateTemplateUrl: organization.certificateTemplateUrl || ""
       });
     }
-  }, [user]);
+  }, [organization]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

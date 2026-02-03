@@ -12,15 +12,16 @@ import Register from "@/pages/auth/Register";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import InstructorDashboard from "@/pages/instructor/InstructorDashboard";
-import BecomeInstructor from "@/pages/instructor/BecomeInstructor"; // New
-import InstructorRequests from "@/pages/admin/InstructorRequests"; // New
+import BecomeInstructor from "@/pages/instructor/BecomeInstructor";
+import InstructorRequests from "@/pages/admin/InstructorRequests";
 import CourseEditor from "@/pages/instructor/CourseEditor";
 import CoursePlayer from "@/pages/student/CoursePlayer";
-import MyProgress from "@/pages/student/MyProgress"; // New
+import MyProgress from "@/pages/student/MyProgress";
 import CoursesPage from "@/pages/student/CoursesPage";
 import NotFound from "@/pages/not-found";
 import Forbidden from "@/pages/forbidden";
 import CertificateView from "@/pages/student/CertificateView";
+import DoubleSliderAuth from "@/components/DoubleSliderAuth"; // New Component
 
 function ProtectedRoute({ component: Component, allowedRoles }: { component: React.ComponentType, allowedRoles?: string[] }) {
   const { user, isLoading } = useAuth();
@@ -62,8 +63,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={RootComponent} />
-      <Route path="/auth/login" component={Login} />
-      <Route path="/auth/register" component={Register} />
+      <Route path="/auth/:page" component={DoubleSliderAuth} />
 
       {/* Admin Routes */}
       <Route path="/admin-dashboard">

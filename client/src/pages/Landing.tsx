@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, Globe2, ShieldCheck, Zap } from "lucide-react";
 import { motion } from "framer-motion";
+import { RequestDemoDialog } from "@/components/landing/RequestDemoDialog";
 
 export default function Landing() {
   return (
@@ -68,11 +69,7 @@ export default function Landing() {
                     <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Link>
-                <Link href="/auth/login">
-                  <button className="w-full sm:w-auto px-10 py-5 rounded-full bg-white border border-border text-foreground font-semibold text-lg hover:bg-gray-50 transition-all flex items-center justify-center">
-                    View Demo
-                  </button>
-                </Link>
+                <RequestDemoDialog />
               </div>
 
               {/* Stats / Social Proof */}

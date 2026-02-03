@@ -29,6 +29,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   createUsersBulk(users: InsertUser[]): Promise<User[]>; // Bulk Import
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  getUsersByOrg(orgId: number): Promise<User[]>; // Added for Multi-tenancy
   getOrganization(id: number): Promise<Organization | undefined>;
   getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
   getOrganizationByAccessCode(code: string): Promise<Organization | undefined>;
@@ -204,6 +205,8 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.update(users).set(update).where(eq(users.id, id)).returning();
     return user;
   }
+
+
 
   async getOrganization(id: number): Promise<Organization | undefined> {
     const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
