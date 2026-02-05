@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { setupAuth, hashPassword } from "./auth";
 import { randomBytes } from "crypto";
-import { users, comments, organizations, insertUserSchema, type User, certificates } from "@shared/schema";
+import { users, comments, organizations, insertUserSchema, type User, certificates, insertEvaluationSchema, insertEvaluationQuestionSchema, insertEvaluationResponseSchema } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, isNull } from "drizzle-orm";
 import multer from "multer";
@@ -890,8 +890,12 @@ export async function registerRoutes(
     const certWithDetails = await db.query.certificates.findFirst({
       where: eq(certificates.code, req.params.code),
       with: {
-        user: true,
-        course: true
+        user: {
+          with: { organization: true }
+        },
+        course: {
+          with: { organization: true }
+        }
       }
     });
 
@@ -1084,6 +1088,84 @@ export async function registerRoutes(
 
     const updatedRequest = await storage.updateInstructorRequest(id, "rejected");
     res.json(updatedRequest);
+  });
+
+
+  // === EVALUATIONS ===
+  app.post("/api/courses/:courseId/evaluations", requireAuth, async (req: any, res) => {
+    // Only Instructor/Admin
+    if (!['instructor', 'org_admin', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    try {
+      const courseId = Number(req.params.courseId);
+      const { title, type, description, questions } = req.body;
+
+      // 1. Create Evaluation Header
+      const evalData = {
+        courseId,
+        type, // 'pre' or 'post'
+        title,
+        description
+      };
+
+      const newEval = await storage.createEvaluation(evalData);
+
+      // 2. Create Questions
+      if (questions && Array.isArray(questions)) {
+        for (const q of questions) {
+          await storage.createEvaluationQuestion({
+            evaluationId: newEval.id,
+            questionText: q.questionText,
+            questionType: q.questionType,
+            order: q.order,
+            options: q.options || null
+          });
+        }
+      }
+
+      res.status(201).json(newEval);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/courses/:courseId/evaluations/:type", requireAuth, async (req: any, res) => {
+    const { courseId, type } = req.params;
+    const evals = await storage.getEvaluationsByCourse(Number(courseId), type);
+
+    if (evals.length === 0) {
+      return res.json(null); // No evaluation found
+    }
+
+    const evalData = evals[0];
+    const questions = await storage.getEvaluationQuestions(evalData.id);
+
+    res.json({ ...evalData, questions });
+  });
+
+  app.post("/api/evaluations/:id/submit", requireAuth, async (req: any, res) => {
+    try {
+      const evaluationId = Number(req.params.id);
+      const { answers } = req.body; // Map
+
+      const response = await storage.createEvaluationResponse({
+        evaluationId,
+        userId: req.user.id,
+        answers
+      });
+
+      res.status(201).json(response);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // Check completion status
+  app.get("/api/courses/:courseId/evaluations/:type/status", requireAuth, async (req: any, res) => {
+    const completed = await storage.hasCompletedEvaluation(req.user.id, Number(req.params.courseId), req.params.type as any);
+    res.json({ completed });
   });
 
   return httpServer;

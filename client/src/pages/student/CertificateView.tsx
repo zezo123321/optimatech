@@ -75,7 +75,7 @@ export default function CertificateView() {
                         orgLogoUrl={cert.course.organization?.certificateLogoUrl || cert.course.organization?.logoUrl}
                         signatureUrl={cert.course.organization?.certificateSignatureUrl}
                         signerName={cert.course.organization?.certificateSignerName}
-                        signerTitle="President / Director"
+                        signerTitle={cert.course.organization?.certificateSignerTitle || "President / Director"}
                     />
                 </div>
             </div>

@@ -10,7 +10,10 @@ import LessonDiscussion from "@/components/student/LessonDiscussion";
 import QuizTaker from "@/components/student/QuizTaker";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Award } from "lucide-react";
+import { Award, Lock } from "lucide-react";
+import { EvaluationForm } from "@/components/evaluation/EvaluationForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function CoursePlayer() {
   const { id } = useParams<{ id: string }>();
@@ -19,9 +22,25 @@ export default function CoursePlayer() {
   const toggleCompletion = useToggleLessonCompletion();
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [showPostEval, setShowPostEval] = useState(false);
+
+  // Evaluation Checks
+  const { data: preEvalStatus, isLoading: isLoadingPre, refetch: refetchPre } = useQuery<{ completed: boolean }>({
+    queryKey: [`/api/courses/${courseId}/evaluations/pre/status`],
+    enabled: !!courseId
+  });
+
+  const { data: postEvalStatus, refetch: refetchPost } = useQuery<{ completed: boolean }>({
+    queryKey: [`/api/courses/${courseId}/evaluations/post/status`],
+    enabled: !!courseId
+  });
+
+  const isPreEvalPending = preEvalStatus && !preEvalStatus.completed;
+  const isPostEvalPending = postEvalStatus && !postEvalStatus.completed;
 
   // Initialize active lesson on load
   useEffect(() => {
@@ -86,6 +105,12 @@ export default function CoursePlayer() {
   };
 
   const claimCertificate = async () => {
+    // Check Post-Eval first
+    if (isPostEvalPending) {
+      setShowPostEval(true);
+      return;
+    }
+
     try {
       const res = await apiRequest("POST", "/api/certificates", { courseId });
       const cert = await res.json();
@@ -140,9 +165,11 @@ export default function CoursePlayer() {
         </div>
         <div className="flex items-center gap-4">
           {progressPercent === 100 && (
-            <Button size="sm" onClick={claimCertificate} className="hidden md:flex gap-2 animate-in fade-in zoom-in duration-500">
-              <Award className="w-4 h-4" /> Claim Certificate
-            </Button>
+            <div className="hidden md:flex gap-2 animate-in fade-in zoom-in duration-500">
+              <Button size="sm" onClick={claimCertificate} className="gap-2">
+                <Award className="w-4 h-4" /> Claim Certificate
+              </Button>
+            </div>
           )}
           <div className="flex flex-col items-end min-w-[120px]">
             <div className="flex items-center justify-between w-full mb-1">
@@ -162,159 +189,200 @@ export default function CoursePlayer() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - Modules */}
-        <aside className="w-80 border-r border-border bg-muted/10 overflow-y-auto flex-shrink-0 hidden md:block">
-          <div className="p-4">
-            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Course Content</h3>
-            <div className="space-y-4">
-              {course.modules?.map((module: any) => (
-                <div key={module.id} className="space-y-2">
-                  <div className="font-medium text-sm text-foreground px-2">
-                    {module.title}
-                  </div>
-                  <div className="space-y-1">
-                    {module.lessons?.map((lesson: any) => {
-                      const isActive = activeLesson?.id === lesson.id;
-                      const isCompleted = course.completedLessonIds?.includes(lesson.id);
-
-                      return (
-                        <button
-                          key={lesson.id}
-                          onClick={() => setActiveLesson(lesson)}
-                          className={cn(
-                            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left group",
-                            isActive
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                          )}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle size={16} className="flex-shrink-0 text-green-500" />
-                          ) : (
-                            isActive ? (
-                              <PlayCircle size={16} className="flex-shrink-0" />
-                            ) : (
-                              <Circle size={16} className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
-                            )
-                          )}
-                          <span className={cn("truncate", isCompleted && !isActive && "text-muted-foreground/70")}>{lesson.title}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+      {/* Pre-Evaluation Blocking Overlay */}
+      {isPreEvalPending ? (
+        <div className="flex-1 overflow-y-auto p-10 bg-neutral-50 flex items-center justify-center">
+          <div className="max-w-3xl w-full">
+            <div className="mb-8 text-center">
+              <Lock className="w-12 h-12 mx-auto text-primary mb-4" />
+              <h2 className="text-2xl font-bold">Course Locked</h2>
+              <p className="text-muted-foreground">Please complete the pre-course evaluation to unlock the content.</p>
             </div>
+            <EvaluationForm
+              courseId={courseId}
+              type="pre"
+              onCompleted={() => {
+                refetchPre();
+                toast({ title: "Unlocked!", description: "You can now access the course content." });
+              }}
+            />
           </div>
-        </aside>
+        </div>
+      ) : (
+        <div className="flex-1 flex overflow-hidden">
+          {/* Sidebar - Modules */}
+          <aside className="w-80 border-r border-border bg-muted/10 overflow-y-auto flex-shrink-0 hidden md:block">
+            <div className="p-4">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Course Content</h3>
+              <div className="space-y-4">
+                {course.modules?.map((module: any) => (
+                  <div key={module.id} className="space-y-2">
+                    <div className="font-medium text-sm text-foreground px-2">
+                      {module.title}
+                    </div>
+                    <div className="space-y-1">
+                      {module.lessons?.map((lesson: any) => {
+                        const isActive = activeLesson?.id === lesson.id;
+                        const isCompleted = course.completedLessonIds?.includes(lesson.id);
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-white p-6 md:p-10">
-          <div className="max-w-4xl mx-auto">
-            {activeLesson ? (
-              <div key={activeLesson.id} className="space-y-8 animate-in fade-in duration-300">
-                <div className="border-b border-border pb-6">
-                  <div className="flex items-center gap-2 text-primary font-medium text-sm mb-2">
-                    <span className="uppercase tracking-wider">{activeLesson.type} Lesson</span>
+                        return (
+                          <button
+                            key={lesson.id}
+                            onClick={() => setActiveLesson(lesson)}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors text-left group",
+                              isActive
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle size={16} className="flex-shrink-0 text-green-500" />
+                            ) : (
+                              isActive ? (
+                                <PlayCircle size={16} className="flex-shrink-0" />
+                              ) : (
+                                <Circle size={16} className="flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+                              )
+                            )}
+                            <span className={cn("truncate", isCompleted && !isActive && "text-muted-foreground/70")}>{lesson.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <h2 className="text-3xl font-display font-bold text-foreground">{activeLesson.title}</h2>
-                </div>
+                ))}
+              </div>
+            </div>
+          </aside>
 
-                {/* Content Renderer */}
-                <div className="prose prose-slate max-w-none">
-                  {activeLesson.type === 'video' && activeLesson.contentUrl && (
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-8 relative group">
-                      {/* 
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto bg-white p-6 md:p-10">
+            <div className="max-w-4xl mx-auto">
+              {activeLesson ? (
+                <div key={activeLesson.id} className="space-y-8 animate-in fade-in duration-300">
+                  <div className="border-b border-border pb-6">
+                    <div className="flex items-center gap-2 text-primary font-medium text-sm mb-2">
+                      <span className="uppercase tracking-wider">{activeLesson.type} Lesson</span>
+                    </div>
+                    <h2 className="text-3xl font-display font-bold text-foreground">{activeLesson.title}</h2>
+                  </div>
+
+                  {/* Content Renderer */}
+                  <div className="prose prose-slate max-w-none">
+                    {activeLesson.type === 'video' && activeLesson.contentUrl && (
+                      <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-8 relative group">
+                        {/* 
                             In a real app, this would be a Video Player component.
                             For now, we use an iframe or placeholder.
                         */}
-                      <iframe
-                        src={activeLesson.contentUrl}
-                        className="w-full h-full"
-                        title={activeLesson.title}
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      />
-                    </div>
-                  )}
-
-                  {activeLesson.type === 'text' && (
-                    <div className="text-lg leading-relaxed text-slate-700 whitespace-pre-wrap">
-                      {activeLesson.textContent || (
-                        <p className="text-muted-foreground italic">No text content available.</p>
-                      )}
-                    </div>
-                  )}
-
-                  {activeLesson.type === 'pdf' && (
-                    <div className="flex items-center gap-4 p-6 bg-muted/20 border border-border rounded-xl">
-                      <div className="p-4 bg-red-100 text-red-600 rounded-lg">
-                        <FileText size={32} />
+                        <iframe
+                          src={activeLesson.contentUrl}
+                          className="w-full h-full"
+                          title={activeLesson.title}
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
                       </div>
-                      <div>
-                        <h4 className="font-bold text-foreground">Lesson Document</h4>
-                        <p className="text-sm text-muted-foreground mb-2">PDF Resource</p>
-                        <a href={activeLesson.contentUrl || "#"} target="_blank" rel="noopener noreferrer">
-                          <button className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
-                            Download / View <Download size={14} />
-                          </button>
-                        </a>
+                    )}
+
+                    {activeLesson.type === 'text' && (
+                      <div className="text-lg leading-relaxed text-slate-700 whitespace-pre-wrap">
+                        {activeLesson.textContent || (
+                          <p className="text-muted-foreground italic">No text content available.</p>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {activeLesson.type === 'quiz' && (
-                    <div className="my-8">
-                      <QuizTaker
-                        lessonId={activeLesson.id}
-                        courseId={courseId}
-                        onComplete={() => {
-                          // Optional: Trigger any other effects like confetti or auto-advance
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
+                    {activeLesson.type === 'pdf' && (
+                      <div className="flex items-center gap-4 p-6 bg-muted/20 border border-border rounded-xl">
+                        <div className="p-4 bg-red-100 text-red-600 rounded-lg">
+                          <FileText size={32} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-foreground">Lesson Document</h4>
+                          <p className="text-sm text-muted-foreground mb-2">PDF Resource</p>
+                          <a href={activeLesson.contentUrl || "#"} target="_blank" rel="noopener noreferrer">
+                            <button className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                              Download / View <Download size={14} />
+                            </button>
+                          </a>
+                        </div>
+                      </div>
+                    )}
 
-                {/* Navigation Buttons - Hide for Quiz as it has its own flow */}
-                {activeLesson.type !== 'quiz' && (
-                  <div className="flex justify-between pt-10 border-t border-border mt-10">
-                    {/* Previous Button Placeholder */}
-                    <div />
-
-                    <Button
-                      size="lg"
-                      onClick={handleToggleComplete}
-                      disabled={toggleCompletion.isPending}
-                      variant={isCurrentLessonCompleted ? "outline" : "default"}
-                      className={cn("gap-2 shadow-lg transition-all", isCurrentLessonCompleted && "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800")}
-                    >
-                      {toggleCompletion.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                      {isCurrentLessonCompleted ? (
-                        <>Completed <Check size={18} /></>
-                      ) : (
-                        <>Mark as Complete <CheckCircle size={18} /></>
-                      )}
-                    </Button>
+                    {activeLesson.type === 'quiz' && (
+                      <div className="my-8">
+                        <QuizTaker
+                          lessonId={activeLesson.id}
+                          courseId={courseId}
+                          onComplete={() => {
+                            // Optional: Trigger any other effects like confetti or auto-advance
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {/* Lesson Discussion / Q&A */}
-                <LessonDiscussion lessonId={activeLesson.id} />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground min-h-[50vh]">
-                <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
-                  <PlayCircle size={32} className="opacity-50" />
+                  {/* Navigation Buttons - Hide for Quiz as it has its own flow */}
+                  {activeLesson.type !== 'quiz' && (
+                    <div className="flex justify-between pt-10 border-t border-border mt-10">
+                      {/* Previous Button Placeholder */}
+                      <div />
+
+                      <Button
+                        size="lg"
+                        onClick={handleToggleComplete}
+                        disabled={toggleCompletion.isPending}
+                        variant={isCurrentLessonCompleted ? "outline" : "default"}
+                        className={cn("gap-2 shadow-lg transition-all", isCurrentLessonCompleted && "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800")}
+                      >
+                        {toggleCompletion.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {isCurrentLessonCompleted ? (
+                          <>Completed <Check size={18} /></>
+                        ) : (
+                          <>Mark as Complete <CheckCircle size={18} /></>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Lesson Discussion / Q&A */}
+                  <LessonDiscussion lessonId={activeLesson.id} />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Ready to Start Learning?</h3>
-                <p>Select a lesson from the sidebar to begin.</p>
-              </div>
-            )}
-          </div>
-        </main>
-      </div >
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground min-h-[50vh]">
+                  <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                    <PlayCircle size={32} className="opacity-50" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Ready to Start Learning?</h3>
+                  <p>Select a lesson from the sidebar to begin.</p>
+                </div>
+              )}
+            </div>
+          </main>
+        </div >
+      )}
+
+      {/* Post Evaluation Dialog */}
+      <Dialog open={showPostEval} onOpenChange={setShowPostEval}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Course Completion Survey</DialogTitle>
+          </DialogHeader>
+          <EvaluationForm
+            courseId={courseId}
+            type="post"
+            onCompleted={() => {
+              refetchPost();
+              setShowPostEval(false);
+              // Automatically trigger claim after success? Or let them click again.
+              // Letting them click again is safer to avoid popup block issues.
+              toast({ title: "Thank you!", description: "You can now claim your certificate." });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div >
   );
 }

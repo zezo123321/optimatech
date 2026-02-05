@@ -12,7 +12,9 @@ import {
   instructorRequests, type InsertInstructorRequest, type InstructorRequest,
   quizQuestions, quizAttempts,
   type QuizQuestion, type InsertQuizQuestion, type QuizAttempt, type InsertQuizAttempt,
-  certificates, type Certificate, type InsertCertificate
+  certificates, type Certificate, type InsertCertificate,
+  evaluations, evaluationQuestions, evaluationResponses,
+  type Evaluation, type InsertEvaluation, type EvaluationQuestion, type InsertEvaluationQuestion, type EvaluationResponse, type InsertEvaluationResponse
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
@@ -104,6 +106,14 @@ export interface IStorage {
   getCertificate(code: string): Promise<Certificate | undefined>;
   getUserCertificates(userId: number): Promise<Certificate[]>;
   getCertificateByCourse(userId: number, courseId: number): Promise<Certificate | undefined>;
+
+  // Evaluations
+  createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
+  getEvaluationsByCourse(courseId: number, type?: string): Promise<Evaluation[]>;
+  createEvaluationQuestion(question: InsertEvaluationQuestion): Promise<EvaluationQuestion>;
+  getEvaluationQuestions(evaluationId: number): Promise<EvaluationQuestion[]>;
+  createEvaluationResponse(response: InsertEvaluationResponse): Promise<EvaluationResponse>;
+  hasCompletedEvaluation(userId: number, courseId: number, type: "pre" | "post"): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -437,6 +447,40 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }
+
+    // Recalculate Progress
+    // 1. Get all modules for the course
+    const courseModules = await db.select().from(modules).where(eq(modules.courseId, courseId));
+    const moduleIds = courseModules.map(m => m.id);
+
+    if (moduleIds.length === 0) return;
+
+    // 2. Get all lessons count
+    const allLessons = await db.select().from(lessons).where(inArray(lessons.moduleId, moduleIds));
+    const totalLessons = allLessons.length;
+
+    if (totalLessons === 0) return;
+
+    // 3. Get user completions count for this course
+    const completions = await db.select().from(lessonCompletions).where(and(eq(lessonCompletions.userId, userId), eq(lessonCompletions.courseId, courseId)));
+    const completedCount = completions.length;
+
+    // 4. Update Enrollment Progress
+    const progress = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+
+    // Check if we need to set completedAt (first time reaching 100%)
+    const [existingEnrollment] = await db.select().from(enrollments).where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+
+    const updateData: any = { progress };
+    if (progress === 100 && !existingEnrollment?.completedAt) {
+      updateData.completedAt = new Date();
+    } else if (progress < 100) {
+      updateData.completedAt = null; // Reset if they uncheck a box
+    }
+
+    await db.update(enrollments)
+      .set(updateData)
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
   }
   // === ADMIN ===
   async getAdminStats(): Promise<{ totalUsers: number; totalCourses: number; totalEnrollments: number }> {
@@ -533,6 +577,53 @@ export class DatabaseStorage implements IStorage {
       .where(eq(instructorRequests.id, id))
       .returning();
     return updated;
+  }
+
+  // === EVALUATIONS ===
+  async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
+    const [newItem] = await db.insert(evaluations).values(evaluation).returning();
+    return newItem;
+  }
+
+  async getEvaluationsByCourse(courseId: number, type?: "pre" | "post"): Promise<Evaluation[]> {
+    const query = db.select().from(evaluations).where(eq(evaluations.courseId, courseId));
+    if (type) {
+      query.where(and(eq(evaluations.courseId, courseId), eq(evaluations.type, type)));
+    }
+    return await query;
+  }
+
+  async createEvaluationQuestion(question: InsertEvaluationQuestion): Promise<EvaluationQuestion> {
+    const [newItem] = await db.insert(evaluationQuestions).values(question).returning();
+    return newItem;
+  }
+
+  async getEvaluationQuestions(evaluationId: number): Promise<EvaluationQuestion[]> {
+    return await db.select().from(evaluationQuestions)
+      .where(eq(evaluationQuestions.evaluationId, evaluationId))
+      .orderBy(evaluationQuestions.order);
+  }
+
+  async createEvaluationResponse(response: InsertEvaluationResponse): Promise<EvaluationResponse> {
+    const [newItem] = await db.insert(evaluationResponses).values(response).returning();
+    return newItem;
+  }
+
+  async hasCompletedEvaluation(userId: number, courseId: number, type: "pre" | "post"): Promise<boolean> {
+    // 1. Find the evaluation ID for this course & type
+    const evals = await this.getEvaluationsByCourse(courseId, type);
+    if (evals.length === 0) return true; // No evaluation exists, so considered "completed" (non-blocking)
+
+    const evaluationId = evals[0].id;
+
+    // 2. Check for response
+    const [response] = await db.select().from(evaluationResponses)
+      .where(and(
+        eq(evaluationResponses.evaluationId, evaluationId),
+        eq(evaluationResponses.userId, userId)
+      ));
+
+    return !!response;
   }
 }
 

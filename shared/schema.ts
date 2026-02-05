@@ -6,6 +6,8 @@ import { relations } from "drizzle-orm";
 // === ENUMS ===
 export const userRoleEnum = pgEnum("user_role", ["super_admin", "org_admin", "instructor", "ta", "student"]);
 export const lessonTypeEnum = pgEnum("lesson_type", ["video", "pdf", "text", "quiz"]);
+export const evaluationTypeEnum = pgEnum("evaluation_type", ["pre", "post"]);
+export const questionTypeEnum = pgEnum("question_type", ["rating", "text", "mcq"]);
 
 // ... (existing code)
 
@@ -287,6 +289,32 @@ export const lessonCompletions = pgTable("lesson_completions", {
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
+export const evaluations = pgTable("evaluations", {
+  id: serial("id").primaryKey(),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  type: evaluationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const evaluationQuestions = pgTable("evaluation_questions", {
+  id: serial("id").primaryKey(),
+  evaluationId: integer("evaluation_id").notNull().references(() => evaluations.id),
+  questionText: text("question_text").notNull(),
+  questionType: questionTypeEnum("question_type").notNull(),
+  options: jsonb("options"), // For MCQ: array of strings
+  order: integer("order").notNull(),
+});
+
+export const evaluationResponses = pgTable("evaluation_responses", {
+  id: serial("id").primaryKey(),
+  evaluationId: integer("evaluation_id").notNull().references(() => evaluations.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  answers: jsonb("answers").notNull(), // Map of questionId -> answer
+  submittedAt: timestamp("submitted_at").defaultNow(),
+});
+
 export const lessonCompletionsRelations = relations(lessonCompletions, ({ one }) => ({
   user: one(users, {
     fields: [lessonCompletions.userId],
@@ -321,12 +349,42 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
   }),
 }));
 
+// ... (existing relations)
+
+export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [evaluations.courseId],
+    references: [courses.id],
+  }),
+  questions: many(evaluationQuestions),
+  responses: many(evaluationResponses),
+}));
+
+export const evaluationQuestionsRelations = relations(evaluationQuestions, ({ one }) => ({
+  evaluation: one(evaluations, {
+    fields: [evaluationQuestions.evaluationId],
+    references: [evaluations.id],
+  }),
+}));
+
+export const evaluationResponsesRelations = relations(evaluationResponses, ({ one }) => ({
+  evaluation: one(evaluations, {
+    fields: [evaluationResponses.evaluationId],
+    references: [evaluations.id],
+  }),
+  user: one(users, {
+    fields: [evaluationResponses.userId],
+    references: [users.id],
+  }),
+}));
+
 // === INSERTS ===
 export const insertOrganizationSchema = createInsertSchema(organizations);
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true }).extend({
   isPublic: z.boolean().optional()
 });
+// ... other inserts ...
 export const insertModuleSchema = createInsertSchema(modules).omit({ id: true });
 export const insertLessonSchema = createInsertSchema(lessons).omit({ id: true });
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true, enrolledAt: true, completedAt: true, progress: true });
@@ -334,6 +392,10 @@ export const insertAssignmentSchema = createInsertSchema(assignments).omit({ id:
 export const insertSubmissionSchema = createInsertSchema(submissions).omit({ id: true, submittedAt: true, grade: true, feedback: true });
 export const gradeSubmissionSchema = createInsertSchema(submissions).pick({ grade: true, feedback: true });
 export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
+
+export const insertEvaluationSchema = createInsertSchema(evaluations).omit({ id: true, createdAt: true });
+export const insertEvaluationQuestionSchema = createInsertSchema(evaluationQuestions).omit({ id: true });
+export const insertEvaluationResponseSchema = createInsertSchema(evaluationResponses).omit({ id: true, submittedAt: true });
 
 // === TYPES ===
 export type User = typeof users.$inferSelect;
@@ -346,6 +408,10 @@ export type Assignment = typeof assignments.$inferSelect;
 export type Submission = typeof submissions.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 
+export type Evaluation = typeof evaluations.$inferSelect;
+export type EvaluationQuestion = typeof evaluationQuestions.$inferSelect;
+export type EvaluationResponse = typeof evaluationResponses.$inferSelect;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
@@ -355,6 +421,12 @@ export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type InsertSubmission = z.infer<typeof insertSubmissionSchema>;
 export type GradeSubmission = z.infer<typeof gradeSubmissionSchema>;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
+
+export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
+export type InsertEvaluationQuestion = z.infer<typeof insertEvaluationQuestionSchema>;
+export type InsertEvaluationResponse = z.infer<typeof insertEvaluationResponseSchema>;
+
+
 
 export const insertCourseStaffSchema = createInsertSchema(courseStaff).omit({ id: true, createdAt: true });
 export type InsertCourseStaff = z.infer<typeof insertCourseStaffSchema>;
