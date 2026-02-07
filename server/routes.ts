@@ -410,11 +410,25 @@ export async function registerRoutes(
   });
 
   app.post("/api/courses/:courseId/staff", requireAuth, async (req: any, res) => {
-    // Only Instructor (Owner) or Org Admin can add staff
-    // TODO: Add refined permission check (omitted for speed, relying on verifyTenantAndRole context later)
-    const { userId, role } = req.body;
-    await storage.addCourseStaff(Number(req.params.courseId), userId, role);
-    res.sendStatus(201);
+    try {
+      const courseId = Number(req.params.courseId);
+      const course = await storage.getCourse(courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // Ownership Check
+      if (course.instructorId !== req.user.id && !['org_admin', 'super_admin'].includes(req.user.role)) {
+        return res.status(403).json({ message: "Only the Instructor or Admin can add staff" });
+      }
+      if (course.organizationId !== req.user.organizationId && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const { userId, role } = req.body;
+      await storage.addCourseStaff(courseId, userId, role);
+      res.sendStatus(201);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.delete("/api/courses/:courseId/staff/:userId", requireAuth, async (req: any, res) => {
@@ -423,12 +437,24 @@ export async function registerRoutes(
   });
 
   // === MODULES & LESSONS ===
-  app.post(api.modules.create.path, requireAuth, async (req, res) => {
+  app.post(api.modules.create.path, requireAuth, async (req: any, res) => {
     try {
+      const courseId = Number(req.params.courseId);
+      const course = await storage.getCourse(courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // Ownership Check
+      if (course.instructorId !== req.user.id && !['org_admin', 'super_admin'].includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (course.organizationId !== req.user.organizationId && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
       const input = api.modules.create.input.parse(req.body);
       const module = await storage.createModule({
         ...input,
-        courseId: Number(req.params.courseId)
+        courseId
       });
       res.status(201).json(module);
     } catch (err) {
@@ -437,29 +463,73 @@ export async function registerRoutes(
   });
 
   app.patch("/api/modules/:id", requireAuth, async (req: any, res) => {
-    // TODO: Add strict ownership check (omitted for speed, relying on client-side and generic logic)
     try {
-      // Ideally fetch module -> check course -> check user
+      const module = await storage.getModule(Number(req.params.id));
+      if (!module) return res.status(404).json({ message: "Module not found" });
+
+      const course = await storage.getCourse(module.courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // Ownership Check
+      if (course.instructorId !== req.user.id && !['org_admin', 'super_admin'].includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (course.organizationId !== req.user.organizationId && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
       const input = api.modules.create.input.partial().parse(req.body);
-      const updated = await storage.updateModule(Number(req.params.id), input);
+      const updated = await storage.updateModule(module.id, input);
       res.json(updated);
     } catch {
       res.status(400).json({ message: "Invalid input" });
     }
   });
 
-  app.delete("/api/modules/:id", requireAuth, async (req, res) => {
-    // Ideally fetch module -> check course -> check user
-    await storage.deleteModule(Number(req.params.id));
-    res.sendStatus(200);
+  app.delete("/api/modules/:id", requireAuth, async (req: any, res) => {
+    try {
+      const module = await storage.getModule(Number(req.params.id));
+      if (!module) return res.status(404).json({ message: "Module not found" });
+
+      const course = await storage.getCourse(module.courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // Ownership Check
+      if (course.instructorId !== req.user.id && !['org_admin', 'super_admin'].includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (course.organizationId !== req.user.organizationId && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      await storage.deleteModule(module.id);
+      res.sendStatus(200);
+    } catch (e) {
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
-  app.post(api.lessons.create.path, requireAuth, async (req, res) => {
+  app.post(api.lessons.create.path, requireAuth, async (req: any, res) => {
     try {
+      const moduleId = Number(req.params.moduleId);
+      const module = await storage.getModule(moduleId);
+      if (!module) return res.status(404).json({ message: "Module not found" });
+
+      const course = await storage.getCourse(module.courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // Ownership Check
+      if (course.instructorId !== req.user.id && !['org_admin', 'super_admin'].includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (course.organizationId !== req.user.organizationId && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
       const input = api.lessons.create.input.parse(req.body);
       const lesson = await storage.createLesson({
         ...input,
-        moduleId: Number(req.params.moduleId)
+        moduleId
       });
       res.status(201).json(lesson);
     } catch (err) {
@@ -467,10 +537,30 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/lessons/:id", requireAuth, async (req, res) => {
-    // Ideally fetch lesson -> check module -> check course -> check user
-    await storage.deleteLesson(Number(req.params.id));
-    res.sendStatus(200);
+  app.delete("/api/lessons/:id", requireAuth, async (req: any, res) => {
+    try {
+      const lesson = await storage.getLesson(Number(req.params.id));
+      if (!lesson) return res.status(404).json({ message: "Lesson not found" });
+
+      const module = await storage.getModule(lesson.moduleId);
+      if (!module) return res.status(404).json({ message: "Module not found" });
+
+      const course = await storage.getCourse(module.courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // Ownership Check
+      if (course.instructorId !== req.user.id && !['org_admin', 'super_admin'].includes(req.user.role)) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      if (course.organizationId !== req.user.organizationId && req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      await storage.deleteLesson(lesson.id);
+      res.sendStatus(200);
+    } catch (e) {
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
   // === QUIZZES ===
@@ -851,6 +941,15 @@ export async function registerRoutes(
 
       if (progress < 100) {
         return res.status(400).json({ message: "Course not completed yet." });
+      }
+
+      // 2.5 Verify Post-Evaluation (if exists)
+      const hasCompletedPostEval = await storage.hasCompletedEvaluation(userId, courseId, 'post');
+      // Note: hasCompletedEvaluation returns true if NO evaluation exists, adhering to non-blocking default.
+      // Wait, let's verify storage implementation of hasCompletedEvaluation.
+      // It returns true if evals.length === 0. So strict check is handled inside.
+      if (!hasCompletedPostEval) {
+        return res.status(403).json({ message: "Please complete the post-course evaluation first." });
       }
 
       // 3. Issue Certificate

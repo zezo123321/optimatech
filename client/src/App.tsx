@@ -7,8 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 import Landing from "@/pages/Landing";
-import Login from "@/pages/auth/Login";
-import Register from "@/pages/auth/Register";
+
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import InstructorDashboard from "@/pages/instructor/InstructorDashboard";

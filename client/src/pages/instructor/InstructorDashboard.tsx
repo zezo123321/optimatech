@@ -34,6 +34,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, BookOpen, Users, BarChart3, MoreVertical, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 }
+    }
+};
+
+const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+};
 
 const createCourseSchema = z.object({
     title: z.string().min(1, "Title is required"),
@@ -108,108 +122,135 @@ export default function InstructorDashboard() {
         <div className="min-h-screen bg-background p-8">
             <div className="container mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-display font-bold">Instructor Dashboard</h1>
-                        <p className="text-muted-foreground">
-                            Welcome back, {user?.name || "Instructor"}. Here's an overview of your courses.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={() => logout()}>Logout</Button>
-                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="lg" className="flex items-center gap-2">
-                                    <Plus className="h-4 w-4" />
-                                    Create Course
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Create New Course</DialogTitle>
-                                    <DialogDescription>
-                                        Start by giving your course a title and description. You can add content later.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <Form {...form}>
-                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="title"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Course Title</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="e.g. Advanced Project Management" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="description"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Description</FormLabel>
-                                                    <FormControl>
-                                                        <Textarea
-                                                            placeholder="Brief summary of what students will learn..."
-                                                            className="resize-none min-h-[100px]"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <DialogFooter>
-                                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                                            <Button type="submit" disabled={isCreating}>
-                                                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Create Course
-                                            </Button>
-                                        </DialogFooter>
-                                    </form>
-                                </Form>
-                            </DialogContent>
-                        </Dialog>
+                {/* Hero Section */}
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 to-indigo-600 p-8 text-white shadow-xl">
+                    <div className="absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full bg-white/10 blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-80 w-80 rounded-full bg-white/10 blur-3xl"></div>
+
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div>
+                            <h1 className="text-3xl md:text-4xl font-display font-bold mb-3">
+                                Instructor Dashboard
+                            </h1>
+                            <p className="text-indigo-100 text-lg max-w-xl leading-relaxed opacity-90">
+                                Welcome back, {user?.name || "Instructor"}. Manage your courses and track student progress.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => logout()}
+                                className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white border-0"
+                            >
+                                Logout
+                            </Button>
+
+                            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button size="lg" className="bg-white text-indigo-600 hover:bg-gray-50 border-0 font-bold shadow-lg">
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Create New Course
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create New Course</DialogTitle>
+                                        <DialogDescription>
+                                            Start by giving your course a title and description. You can add content later.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <Form {...form}>
+                                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                            <FormField
+                                                control={form.control}
+                                                name="title"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Course Title</FormLabel>
+                                                        <FormControl>
+                                                            <Input placeholder="e.g. Advanced Project Management" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={form.control}
+                                                name="description"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Description</FormLabel>
+                                                        <FormControl>
+                                                            <Textarea
+                                                                placeholder="Brief summary of what students will learn..."
+                                                                className="resize-none min-h-[100px]"
+                                                                {...field}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <DialogFooter>
+                                                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                                                <Button type="submit" disabled={isCreating}>
+                                                    {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Create Course
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </Form>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                     </div>
                 </div>
 
                 {/* Stats Row */}
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-                            <BookOpen className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{courses?.length || 0}</div>
-                            <p className="text-xs text-muted-foreground">Active courses</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">--</div>
-                            <p className="text-xs text-muted-foreground">Enrolled across all courses</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">--</div>
-                            <p className="text-xs text-muted-foreground">Based on student feedback</p>
-                        </CardContent>
-                    </Card>
-                </div>
+                <motion.div
+                    variants={container}
+                    initial="hidden"
+                    animate="show"
+                    className="grid gap-4 md:grid-cols-3"
+                >
+                    <motion.div variants={item}>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{courses?.length || 0}</div>
+                                <p className="text-xs text-muted-foreground">Active courses</p>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                    <motion.div variants={item}>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">--</div>
+                                <p className="text-xs text-muted-foreground">Enrolled across all courses</p>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                    <motion.div variants={item}>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
+                                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">--</div>
+                                <p className="text-xs text-muted-foreground">Based on student feedback</p>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                </motion.div>
 
                 {/* Courses List */}
                 <div className="space-y-4">
@@ -226,50 +267,56 @@ export default function InstructorDashboard() {
                             <Button onClick={() => setIsDialogOpen(true)}>Create Course</Button>
                         </Card>
                     ) : (
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        <motion.div
+                            variants={container}
+                            initial="hidden"
+                            animate="show"
+                            className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+                        >
                             {courses?.map((course: any) => (
-                                <Card key={course.id} className="group overflow-hidden hover:shadow-lg transition-all duration-200">
-                                    <div className="aspect-video w-full bg-muted relative">
-                                        {course.thumbnailUrl ? (
-                                            <img
-                                                src={course.thumbnailUrl}
-                                                alt={course.title}
-                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-secondary/50">
-                                                <BookOpen className="h-12 w-12 text-muted-foreground/20" />
+                                <motion.div key={course.id} variants={item}>
+                                    <Link href={`/courses/${course.id}/edit`}>
+                                        <Card className="group overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer h-full border-2 border-transparent hover:border-primary/20">
+                                            <div className="aspect-video w-full bg-muted relative overflow-hidden">
+                                                {course.thumbnailUrl ? (
+                                                    <img
+                                                        src={course.thumbnailUrl}
+                                                        alt={course.title}
+                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-secondary/50">
+                                                        <BookOpen className="h-12 w-12 text-muted-foreground/20" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute top-2 right-2 flex gap-1">
+                                                    <div className={`px-2 py-1 rounded-full text-xs font-semibold backdrop-blur-md ${course.published ? 'bg-green-500/10 text-green-700 bg-white/50' : 'bg-yellow-500/10 text-yellow-700 bg-white/50'}`}>
+                                                        {course.published ? 'Published' : 'Draft'}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        )}
-                                        <div className="absolute top-2 right-2 flex gap-1">
-                                            <div className={`px-2 py-1 rounded-full text-xs font-semibold ${course.published ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                {course.published ? 'Published' : 'Draft'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <CardHeader>
-                                        <CardTitle className="line-clamp-1">{course.title}</CardTitle>
-                                        <CardDescription className="line-clamp-2 min-h-[40px]">
-                                            {course.description}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="flex items-center justify-between pt-4 border-t border-border">
-                                            <div className="text-sm text-muted-foreground">
-                                                {/* placeholder for module count */}
-                                                Modules: --
-                                            </div>
-                                            <Link href={`/courses/${course.id}/edit`}>
-                                                <Button variant="outline" size="sm" className="gap-2">
-                                                    <Pencil className="h-3 w-3" />
-                                                    Edit
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                            <CardHeader>
+                                                <CardTitle className="line-clamp-1 group-hover:text-primary transition-colors">{course.title}</CardTitle>
+                                                <CardDescription className="line-clamp-2 min-h-[40px]">
+                                                    {course.description}
+                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="flex items-center justify-between pt-4 border-t border-border">
+                                                    <div className="text-sm text-muted-foreground">
+                                                        Modules: --
+                                                    </div>
+                                                    <Button variant="ghost" size="sm" className="gap-2 group-hover:translate-x-1 transition-transform">
+                                                        Edit
+                                                        <Pencil className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                </motion.div>
                             ))}
-                        </div>
+                        </motion.div>
                     )}
                 </div>
             </div>

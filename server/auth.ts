@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as DbUser } from "@shared/schema";
 
+import rateLimit from "express-rate-limit";
 const scryptAsync = promisify(scrypt);
 
 export async function hashPassword(password: string) {
@@ -69,12 +70,19 @@ export async function setupAuth(app: Express) {
         }
     });
 
+    // Rate Limiter for Auth Routes
+    const authLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 50, // Limit each IP to 50 requests per windowMs
+        message: "Too many login attempts, please try again later."
+    });
+
     // Simple route registration for auth interactions
-    app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    app.post("/api/login", authLimiter, passport.authenticate("local"), (req, res) => {
         res.status(200).json(req.user);
     });
 
-    app.post("/api/register", async (req, res, next) => {
+    app.post("/api/register", authLimiter, async (req, res, next) => {
         try {
             // "Hybrid" Onboarding Logic
             let orgId: number;
@@ -87,10 +95,6 @@ export async function setupAuth(app: Express) {
                     return res.status(400).json({ message: "Invalid Access Code" });
                 }
                 orgId = org.id;
-            } else {
-                // B2C Path: Independent User (No Organization)
-                // We leave orgId undefined/null. Schema allows this (users.organizationId is nullable).
-                // orgId remains undefined here.
             }
 
             const existingUser = await storage.getUserByUsername(req.body.username);
@@ -103,7 +107,7 @@ export async function setupAuth(app: Express) {
                 ...req.body,
                 password: hashedPassword,
                 role: "student", // B2C users default to student always
-                organizationId: orgId! // Will be undefined if B2C, which Drizzle/PG handles as NULL if column implies
+                organizationId: orgId! // Will be undefined if B2C
             });
 
             // Auto-login after register

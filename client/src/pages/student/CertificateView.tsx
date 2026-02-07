@@ -49,8 +49,8 @@ export default function CertificateView() {
             {/* Header for Actions */}
             <div className="bg-white border-b py-4 px-8 flex justify-between items-center shadow-sm print:hidden">
                 <div className="flex items-center gap-2">
-                    <img src="/assets/logo.svg" alt="Tadreeb" className="h-8" onError={(e) => e.currentTarget.style.display = 'none'} />
-                    <span className="font-bold text-xl tracking-tight">TadreebLink Verification</span>
+                    <img src="/assets/logo.png" alt="Optimatech" className="h-10 w-auto object-contain" />
+                    <span className="font-bold text-xl tracking-tight">Optimatech Verification</span>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={handlePrint}>

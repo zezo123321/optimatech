@@ -67,11 +67,9 @@ export function Navbar() {
                 <div className="flex items-center gap-2">
                     <Link href={user ? (user.role === 'student' ? '/dashboard' : '/instructor-dashboard') : '/'}>
                         <div className="flex items-center gap-2 cursor-pointer">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                                <GraduationCap size={18} />
-                            </div>
-                            <span className="font-display font-bold text-lg hidden sm:inline-block">
-                                Tadreeb<span className="text-primary">Link</span>
+                            <img src="/assets/logo.png" alt="Optimatech" className="h-10 w-auto object-contain" />
+                            <span className="font-display font-bold text-xl hidden sm:inline-block tracking-tight">
+                                Optimatech
                             </span>
                         </div>
                     </Link>

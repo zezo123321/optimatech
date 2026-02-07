@@ -33,6 +33,20 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 // Type definition for report
 type ReportItem = {
@@ -137,12 +151,29 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-display font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage users and view platform analytics.</p>
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-800 to-gray-900 p-8 text-white shadow-xl">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full bg-white/5 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-80 w-80 rounded-full bg-white/5 blur-3xl"></div>
+
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-display font-bold mb-3">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-300 text-lg max-w-xl leading-relaxed opacity-90">
+              Manage users, view platform analytics, and configure organization settings.
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={() => logout()}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white border-0 backdrop-blur-sm"
+          >
+            Logout
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => logout()}>Logout</Button>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
@@ -160,44 +191,56 @@ export default function AdminDashboard() {
 
         <TabsContent value="overview" className="space-y-8">
           {/* Stats Grid */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Across all roles
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalCourses || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Active content
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Enrollments</CardTitle>
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalEnrollments || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Student engagements
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Stats Grid */}
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid gap-4 md:grid-cols-3"
+          >
+            <motion.div variants={item}>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{stats?.totalUsers || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Across all roles
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            <motion.div variants={item}>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{stats?.totalCourses || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Active content
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            <motion.div variants={item}>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Enrollments</CardTitle>
+                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{stats?.totalEnrollments || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Student engagements
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
 
 
 

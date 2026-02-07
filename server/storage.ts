@@ -48,9 +48,11 @@ export interface IStorage {
   deleteCourse(id: number): Promise<void>; // Added
 
   // Modules & Lessons
+  getModule(id: number): Promise<Module | undefined>; // Added for security check
   createModule(module: InsertModule): Promise<Module>;
   updateModule(id: number, module: Partial<InsertModule>): Promise<Module>; // Added
   deleteModule(id: number): Promise<void>; // Added
+  getLesson(id: number): Promise<Lesson | undefined>; // Added for security check
   createLesson(lesson: InsertLesson): Promise<Lesson>;
   deleteLesson(id: number): Promise<void>; // Added
 
@@ -322,6 +324,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // === MODULES & LESSONS ===
+  async getModule(id: number): Promise<Module | undefined> {
+    const [module] = await db.select().from(modules).where(eq(modules.id, id));
+    return module;
+  }
+
   async createModule(module: InsertModule): Promise<Module> {
     const [newModule] = await db.insert(modules).values(module).returning();
     return newModule;
@@ -339,6 +346,11 @@ export class DatabaseStorage implements IStorage {
   async createLesson(lesson: InsertLesson): Promise<Lesson> {
     const [newLesson] = await db.insert(lessons).values(lesson).returning();
     return newLesson;
+  }
+
+  async getLesson(id: number): Promise<Lesson | undefined> {
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson;
   }
 
   async deleteLesson(id: number): Promise<void> {
@@ -586,11 +598,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEvaluationsByCourse(courseId: number, type?: "pre" | "post"): Promise<Evaluation[]> {
-    const query = db.select().from(evaluations).where(eq(evaluations.courseId, courseId));
+    const conditions = [];
+    conditions.push(eq(evaluations.courseId, courseId));
+
     if (type) {
-      query.where(and(eq(evaluations.courseId, courseId), eq(evaluations.type, type)));
+      conditions.push(eq(evaluations.type, type));
     }
-    return await query;
+
+    return await db.select().from(evaluations).where(and(...conditions));
   }
 
   async createEvaluationQuestion(question: InsertEvaluationQuestion): Promise<EvaluationQuestion> {

@@ -151,86 +151,25 @@ export default function DoubleSliderAuth() {
             left: 0;
             width: 50%;
             z-index: 2;
-            /* When Overlay is Left (Default), this (Sign In) should be on Right? 
-               Wait. If Overlay is Left, and covers Left 50%. Then Right 50% is exposed.
-               So Sign In should be at left: 50%?
-               
-               Let's Use Transform Logic requested:
-               "Main Container relative... Form Container absolute... Forms take 100% height... use z-index and opacity"
-               
-               Let's stick to the "Correct" CSS implementation that matches the Visual Goal:
-               Goal: Sign In on Right (Visible). Sign Up on Left (Hidden).
-               State Change: Sign In Slides Left (Hidden). Sign Up Slides Right? Or revealed?
-            */
-            left: 0;
-            width: 50%;
-            opacity: 0;
-            z-index: 1;
-        }
-        
-        /* If Default is "Sign In Visible", and Overlay is on Left covering Sign Up.
-           Then Sign In needs to be positioned at left: 50%? Or Transform: translateX(100%)?
-           
-           Let's standardise positions:
-           Both forms at left: 0.
-        */
-        
-        .sign-up-container {
-            left: 0;
-            width: 50%;
-            opacity: 1;
-            z-index: 5;
-            /* This implies Sign Up is default visible? No. */
-        }
-        
-        /* 
-           RE-READING PROMPT CAREFULLY:
-           "Overlay moves to the right side... covering one form and revealing the other."
-           Start: Overlay on Left. 
-           Visible: Right Side (Sign In).
-           Hidden: Left Side (Sign Up).
-           
-           Action: Click Overlay Button (on Left Overlay).
-           Result: Overlay moves Right. Covers Right Side (Sign In).
-           Visible: Left Side (Sign Up).
-           
-           Implementation of Form Positions:
-           Sign Up Container (The one exposed on Left after slide):
-             Position: Left 0.
-             Default Opacity: 0 (Hidden behind overlay? Or just z-index low).
-             
-           Sign In Container (The one exposed on Right default):
-             Position: Left 0.
-             Transform: TranslateX(100%) (Moves it to Right slot).
-             Default Opacity: 1.
-        */
-
-        .sign-up-container {
-            left: 0;
-            width: 50%;
-            z-index: 1;
-            opacity: 0;
-        }
-        
-        .sign-in-container {
-            left: 0;
-            width: 50%;
-            z-index: 2;
             opacity: 1;
             transform: translateX(100%); 
         }
 
+        .sign-up-container {
+            left: 0;
+            width: 50%;
+            z-index: 1;
+            opacity: 0;
+        }
+
         /* Active State (Right Panel Active) */
-        /* Overlay moved to Right. Sign Up Revealed on Left. Sign In Covered on Right */
-        
         .container.right-panel-active .sign-in-container {
-            transform: translateX(100%); /* Stays there? */
-            opacity: 0; /* Fades out */
+            transform: translateX(100%);
+            opacity: 0;
             z-index: 1;
         }
         
         .container.right-panel-active .sign-up-container {
-            transform: translateX(100%); /* Moves to Right? No, needs to be on Left. */
             transform: translateX(0%);
             opacity: 1;
             z-index: 5;
@@ -265,13 +204,13 @@ export default function DoubleSliderAuth() {
         }
 
         .overlay {
-            background: linear-gradient(to right, #4f46e5, #7c3aed);
+            background: linear-gradient(to right, #0EA5E9, #2563EB); /* Optimatech Blue Gradient */
             background-repeat: no-repeat;
             background-size: cover;
             background-position: 0 0;
             color: #FFFFFF;
             position: relative;
-            left: 0; /* Start at 0 to align easier */
+            left: 0;
             height: 100%;
             width: 200%;
             transform: translateX(0);
@@ -279,7 +218,7 @@ export default function DoubleSliderAuth() {
         }
 
         .container.right-panel-active .overlay {
-            transform: translateX(-50%); /* Move Left to show Right Half */
+            transform: translateX(-50%);
         }
 
         .overlay-panel {
@@ -304,25 +243,25 @@ export default function DoubleSliderAuth() {
         }
         
         .container.right-panel-active .overlay-left {
-            transform: translateX(-20%); /* Slide out Left */
+            transform: translateX(-20%);
             opacity: 0;
         }
 
         /* Right Panel (Hidden Default - on Right Half) */
         .overlay-right {
             right: 0;
-            transform: translateX(20%); /* Start slightly right */
+            transform: translateX(20%);
             opacity: 0;
         }
 
         .container.right-panel-active .overlay-right {
-           transform: translateX(0); /* Slide In */
+           transform: translateX(0);
            opacity: 1;
         }
          /* Button Styles */
          .ghost {
              background-color: transparent;
-             border: 2px solid #FFFFFF !important; /* Force border visibility */
+             border: 2px solid #FFFFFF !important;
              border-radius: 999px;
              padding: 12px 45px;
              font-weight: 700;
@@ -340,7 +279,59 @@ export default function DoubleSliderAuth() {
          .ghost:hover {
             background-color: rgba(255, 255, 255, 0.2);
          }
-         
+
+         /* --- Mobile Responsive Styles --- */
+         @media (max-width: 768px) {
+             .container {
+                 width: 100%;
+                 min-height: 100vh;
+                 border-radius: 0;
+                 box-shadow: none;
+             }
+             
+             .overlay-container {
+                 display: none;
+             }
+             
+             .form-container {
+                 width: 100%;
+                 padding: 0 30px;
+                 position: absolute;
+                 top: 50%;
+                 transform: translateY(-50%);
+                 transition: opacity 0.4s ease-in-out;
+             }
+             
+             .sign-in-container {
+                 left: 0;
+                 z-index: 5;
+                 opacity: 1;
+                 transform: translateY(-50%) !important;
+             }
+             
+             .sign-up-container {
+                 left: 0;
+                 z-index: 1;
+                 opacity: 0;
+                 pointer-events: none;
+                 transform: translateY(-50%) !important;
+             }
+             
+             /* Active State for Mobile */
+             .container.right-panel-active .sign-in-container {
+                 opacity: 0;
+                 pointer-events: none;
+                 transform: translateY(-50%) !important;
+             }
+             
+             .container.right-panel-active .sign-up-container {
+                 opacity: 1;
+                 z-index: 5;
+                 pointer-events: all;
+                 transform: translateY(-50%) !important;
+                 animation: none;
+             }
+         }
       `}</style>
 
             {/* Main Container toggles class */}
@@ -350,7 +341,7 @@ export default function DoubleSliderAuth() {
                 <div className="form-container sign-up-container">
                     <Form {...registerForm}>
                         <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="w-full space-y-3">
-                            <h1 className="text-3xl font-bold mb-4 text-indigo-900">Create Account</h1>
+                            <h1 className="text-3xl font-bold mb-4 text-primary">Create Account</h1>
                             <SocialIcons />
                             <div className="text-sm text-gray-400 mb-4">or use your email for registration</div>
                             <FormField control={registerForm.control} name="name" render={({ field }) => (
@@ -368,9 +359,22 @@ export default function DoubleSliderAuth() {
                             <FormField control={registerForm.control} name="accessCode" render={({ field }) => (
                                 <FormItem><FormControl><Input placeholder="Org Code (Optional)" {...field} className="bg-gray-50 border border-gray-200 my-2 h-12" /></FormControl></FormItem>
                             )} />
-                            <Button className="w-48 rounded-full h-12 bg-indigo-600 hover:bg-indigo-700 mt-4 font-bold tracking-wide uppercase shadow-lg transition-transform hover:scale-105" type="submit" disabled={registerMutation.isPending}>
+                            <Button className="w-48 rounded-full h-12 bg-primary hover:bg-primary/90 mt-4 font-bold tracking-wide uppercase shadow-lg transition-transform hover:scale-105" type="submit" disabled={registerMutation.isPending}>
                                 Sign Up
                             </Button>
+
+                            {/* Mobile Toggle Link */}
+                            <div className="md:hidden mt-6 text-center">
+                                <p className="text-gray-500 text-sm">
+                                    Already have an account?{" "}
+                                    <span
+                                        onClick={() => { setIsRightPanelActive(false); setLocation("/auth/login"); }}
+                                        className="text-primary font-bold cursor-pointer hover:underline"
+                                    >
+                                        Sign In
+                                    </span>
+                                </p>
+                            </div>
                         </form>
                     </Form>
                 </div>
@@ -379,7 +383,7 @@ export default function DoubleSliderAuth() {
                 <div className="form-container sign-in-container">
                     <Form {...loginForm}>
                         <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="w-full flex flex-col items-center space-y-4">
-                            <h1 className="text-3xl font-bold mb-4 text-indigo-900">Sign in</h1>
+                            <h1 className="text-3xl font-bold mb-4 text-primary">Sign in</h1>
                             <SocialIcons />
                             <div className="text-sm text-gray-400 mb-4">or use your account</div>
                             <div className="w-full">
@@ -391,10 +395,23 @@ export default function DoubleSliderAuth() {
                                 )} />
                             </div>
 
-                            <Button className="w-48 rounded-full h-12 bg-indigo-600 hover:bg-indigo-700 font-bold tracking-wide uppercase shadow-lg transition-transform hover:scale-105" type="submit" disabled={loginMutation.isPending}>
+                            <Button className="w-48 rounded-full h-12 bg-primary hover:bg-primary/90 font-bold tracking-wide uppercase shadow-lg transition-transform hover:scale-105" type="submit" disabled={loginMutation.isPending}>
                                 Sign In
                             </Button>
-                            <a href="#" className="text-sm text-gray-500 hover:text-indigo-600 font-medium transition-colors">Forgot your password?</a>
+                            <a href="#" className="text-sm text-gray-500 hover:text-primary font-medium transition-colors">Forgot your password?</a>
+
+                            {/* Mobile Toggle Link */}
+                            <div className="md:hidden mt-6 text-center">
+                                <p className="text-gray-500 text-sm">
+                                    Don't have an account?{" "}
+                                    <span
+                                        onClick={() => { setIsRightPanelActive(true); setLocation("/auth/register"); }}
+                                        className="text-primary font-bold cursor-pointer hover:underline"
+                                    >
+                                        Sign Up
+                                    </span>
+                                </p>
+                            </div>
                         </form>
                     </Form>
                 </div>
@@ -407,7 +424,7 @@ export default function DoubleSliderAuth() {
                         <div className="overlay-panel overlay-left w-[50%] absolute left-0 flex flex-col items-center justify-center text-white h-full px-12 text-center pointer-events-auto">
                             <h1 className="text-4xl font-bold mb-4">Hello, Friend!</h1>
                             <p className="mb-8 text-lg opacity-90">Enter your personal details and start your journey with us</p>
-                            <button className="ghost hover:bg-white hover:text-indigo-600 transition-colors" onClick={() => { setIsRightPanelActive(true); setLocation("/auth/register"); }}>
+                            <button className="ghost hover:bg-white hover:text-primary transition-colors" onClick={() => { setIsRightPanelActive(true); setLocation("/auth/register"); }}>
                                 Sign Up
                             </button>
                         </div>
@@ -416,7 +433,7 @@ export default function DoubleSliderAuth() {
                         <div className="overlay-panel overlay-right w-[50%] absolute right-0 flex flex-col items-center justify-center text-white h-full px-12 text-center pointer-events-auto">
                             <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
                             <p className="mb-8 text-lg opacity-90">To keep connected with us please login with your personal info</p>
-                            <button className="ghost hover:bg-white hover:text-indigo-600 transition-colors" onClick={() => { setIsRightPanelActive(false); setLocation("/auth/login"); }}>
+                            <button className="ghost hover:bg-white hover:text-primary transition-colors" onClick={() => { setIsRightPanelActive(false); setLocation("/auth/login"); }}>
                                 Sign In
                             </button>
                         </div>
