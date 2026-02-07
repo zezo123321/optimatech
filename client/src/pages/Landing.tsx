@@ -73,7 +73,7 @@ export default function Landing() {
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-40 overflow-hidden">
+      <section className="relative pt-24 pb-20 md:pt-32 md:pb-40 overflow-hidden">
         {/* Dynamic Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-background z-0" />
         <div className="absolute inset-0 bg-grid-slate-900/[0.04] bg-[bottom_1px_center] [mask-image:linear-gradient(to_bottom,transparent,black)] pointer-events-none z-0" />
@@ -106,7 +106,7 @@ export default function Landing() {
 
               <motion.h1
                 variants={fadeInUp}
-                className="text-6xl md:text-8xl font-display font-black tracking-tighter text-foreground mb-8 leading-[1.1]"
+                className="text-4xl sm:text-5xl md:text-8xl font-display font-black tracking-tighter text-foreground mb-6 md:mb-8 leading-[1.1]"
               >
                 Unlock Your Team's <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-500 to-cyan-400 animate-gradient-x bg-[length:200%_auto]">
@@ -123,20 +123,20 @@ export default function Landing() {
 
               <motion.div
                 variants={fadeInUp}
-                className="flex flex-col sm:flex-row items-center justify-center gap-6"
+                className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 w-full"
               >
                 <Link href="/auth/register">
                   <motion.button
                     whileHover={{ scale: 1.05, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
                     whileTap={{ scale: 0.95 }}
-                    className="w-full sm:w-auto px-10 py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-all flex items-center justify-center gap-3 group relative overflow-hidden"
+                    className="w-full sm:w-auto px-8 py-4 sm:px-10 sm:py-5 rounded-full bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-all flex items-center justify-center gap-3 group relative overflow-hidden shadow-xl"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                     <span className="relative z-10">Start Free Trial</span>
                     <ArrowRight size={20} className="relative z-10 group-hover:translate-x-1 transition-transform" />
                   </motion.button>
                 </Link>
-                <div className="scale-100 hover:scale-105 transition-transform">
+                <div className="w-full sm:w-auto scale-100 hover:scale-105 transition-transform">
                   <RequestDemoDialog />
                 </div>
               </motion.div>
@@ -147,7 +147,7 @@ export default function Landing() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="mt-20 pt-10 border-t border-border/40 grid grid-cols-2 md:grid-cols-4 gap-8"
+                className="mt-12 md:mt-20 pt-10 border-t border-border/40 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8 md:gap-8"
               >
                 {[
                   { label: "Active Learners", value: "50k+" },
@@ -171,7 +171,7 @@ export default function Landing() {
       </section>
 
       {/* Features Grid with Scroll Animation */}
-      <section className="py-32 bg-secondary/30 relative">
+      <section className="py-16 md:py-32 bg-secondary/30 relative">
         {/* Parallax Background Shape */}
         <motion.div
           style={{ y, opacity }}
@@ -264,7 +264,7 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
+      <section className="py-16 md:py-24 bg-primary text-primary-foreground relative overflow-hidden">
         <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -272,8 +272,8 @@ export default function Landing() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl md:text-5xl font-black font-display mb-6">Ready to transform your team?</h2>
-            <p className="text-blue-100 text-xl max-w-2xl mx-auto mb-10">Join 200+ enterprise organizations delivering world-class training with Optimatech.</p>
+            <h2 className="text-3xl md:text-5xl font-black font-display mb-6">Ready to transform your team?</h2>
+            <p className="text-blue-100 text-lg md:text-xl max-w-2xl mx-auto mb-10">Join 200+ enterprise organizations delivering world-class training with Optimatech.</p>
             <Link href="/auth/register">
               <motion.button
                 whileHover={{ scale: 1.05 }}
