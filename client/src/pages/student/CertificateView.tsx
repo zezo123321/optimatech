@@ -64,7 +64,7 @@ export default function CertificateView() {
 
             {/* Main Content */}
             <div className="flex-1 flex items-center justify-center p-8 overflow-auto print:p-0 print:overflow-visible">
-                <div className="scale-75 md:scale-100 origin-center transition-transform print:scale-100 print:transform-none">
+                <div className="w-full max-w-[800px] scale-75 md:scale-100 origin-center transition-transform print:scale-100 print:transform-none">
                     <CertificateTemplate
                         studentName={cert.user.name || cert.user.username}
                         courseTitle={cert.course.title}

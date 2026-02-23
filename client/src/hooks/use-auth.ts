@@ -27,7 +27,17 @@ async function login(data: { username: string; password: string }): Promise<User
   });
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    if (response.status === 401) {
+      throw new Error("Invalid username or password");
+    }
+    const errorText = await response.text();
+    try {
+      const errorJson = JSON.parse(errorText);
+      throw new Error(errorJson.message || errorText);
+    } catch (e) {
+      if (e instanceof Error && e.message !== errorText) throw e;
+      throw new Error(errorText || "Login failed");
+    }
   }
 
   return response.json();
